@@ -311,7 +311,9 @@ describe('module', function() {
           }, {
             enum: ['string', {}]
           }, {
-            enum: [[], false]
+            enum: [
+              [], false
+            ]
           }]
         })
       }).to.throw(/incompatible/)
@@ -430,6 +432,158 @@ describe('module', function() {
             }
           }]
         }
+      })
+    })
+
+    it('merges contains using allOf', function() {
+      var result = simplifier({
+        allOf: [{
+
+        }, {
+          contains: {
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'bar'
+              }
+            }
+          }
+        }, {
+          contains: {
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'foo'
+              }
+            }
+          }
+        }]
+      })
+
+      expect(result).to.eql({
+        contains: {
+          allOf: [{
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'bar'
+              }
+            }
+          }, {
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'foo'
+              }
+            }
+          }]
+        }
+      })
+    })
+
+    it('merges additionalItems using allOf', function() {
+      var result = simplifier({
+        allOf: [{
+
+        }, {
+          additionalItems: {
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'bar'
+              }
+            }
+          }
+        }, {
+          additionalItems: {
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'foo'
+              }
+            }
+          }
+        }]
+      })
+
+      expect(result).to.eql({
+        additionalItems: {
+          allOf: [{
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'bar'
+              }
+            }
+          }, {
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'foo'
+              }
+            }
+          }]
+        }
+      })
+    })
+
+    it('merges pattern using allOf', function() {
+      var result = simplifier({
+        allOf: [{
+
+        }, {
+          pattern: 'fdsaf'
+        }, {
+          pattern: 'abba'
+        }]
+      })
+
+      expect(result).to.eql({
+        allOf: [{
+          pattern: 'fdsaf'
+        }, {
+          pattern: 'abba'
+        }]
+      })
+
+      var result2 = simplifier({
+        allOf: [{
+          pattern: 'abba'
+        }]
+      })
+
+      expect(result2).to.eql({
+        pattern: 'abba'
+      })
+    })
+
+    it('merges multipleOf using allOf', function() {
+      var result = simplifier({
+        allOf: [{
+
+        }, {
+          multipleOf: 10
+        }, {
+          multipleOf: 20
+        }]
+      })
+
+      expect(result).to.eql({
+        allOf: [{
+          multipleOf: 10
+        }, {
+          multipleOf: 20
+        }]
+      })
+
+      var result2 = simplifier({
+        allOf: [{
+          multipleOf: 10
+        }]
+      })
+
+      expect(result2).to.eql({
+        multipleOf: 10
       })
     })
   })

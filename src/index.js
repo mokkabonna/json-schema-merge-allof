@@ -111,6 +111,9 @@ defaultResolvers.maximum = defaultResolvers.maxLength
 defaultResolvers.exclusiveMaximum = defaultResolvers.maxLength
 defaultResolvers.maxItems = defaultResolvers.maxLength
 defaultResolvers.maxProperties = defaultResolvers.maxLength
+defaultResolvers.contains = defaultResolvers.not
+defaultResolvers.pattern = defaultResolvers.not
+defaultResolvers.additionalItems = defaultResolvers.not
 
 function simplifier(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
@@ -186,6 +189,8 @@ function simplifier(rootSchema, options, totalSchemas) {
       } else if (
         (hasObjectValue || isProperties) &&
         key !== 'default' &&
+        key !== 'contains' &&
+        key !== 'additionalItems' &&
         key !== 'not'
       ) {
         merged[key] = mergeSchemas(compacted, key, merged[key] || {})
@@ -194,6 +199,18 @@ function simplifier(rootSchema, options, totalSchemas) {
 
       if (compacted.length === 1) {
         merged[key] = compacted[0]
+      } else if (key === 'pattern') {
+        merged.allOf = compacted.map(function(regexp) {
+          return {
+            pattern: regexp
+          }
+        })
+      } else if (key === 'multipleOf') {
+        merged.allOf = compacted.map(function(regexp) {
+          return {
+            multipleOf: regexp
+          }
+        })
       } else {
         var resolver = options.resolvers[key] || options.resolvers.first
         merged[key] = resolver(schemas, values, compacted, key)
