@@ -1,20 +1,25 @@
+// var flatten = require('lodash/flatten')
 var flattenDeep = require('lodash/flattenDeep')
 var uniq = require('lodash/uniq')
 var defaults = require('lodash/defaults')
 var omit = require('lodash/omit')
 var intersection = require('lodash/intersection')
 var isPlainObject = require('lodash/isPlainObject')
-var pull = require('lodash/pull')
+var sortBy = require('lodash/sortBy')
+// var mergeWith = require('lodash/mergeWith')
+// var pull = require('lodash/pull')
 // var isFunction = require('lodash/isFunction')
 // var values = require('lodash/values')
 
 function getAllOf(schema) {
   if (Array.isArray(schema.allOf)) {
-    return [omit(schema, 'allOf')].concat(schema.allOf.map(function(allSchema) {
+    var allOf = schema.allOf
+    delete schema.allOf
+    return [schema].concat(allOf.map(function(allSchema) {
       return getAllOf(allSchema)
     }))
   } else {
-    return omit(schema, 'allOf')
+    return [schema]
   }
 }
 
@@ -49,8 +54,11 @@ var defaultResolvers = {
       }
     }
   },
-  default: function defaultResolver(schemas, values, compacted) {
+  first: function defaultResolver(schemas, values, compacted) {
     return compacted[0]
+  },
+  required: function(schemas, values, compacted, key) {
+    return sortBy(uniq(flattenDeep(compacted)))
   },
   minLength: function(schemas, values, compacted) {
     return Math.max.apply(Math, compacted)
@@ -77,13 +85,18 @@ defaultResolvers.exclusiveMaximum = defaultResolvers.maxLength
 defaultResolvers.maxItems = defaultResolvers.maxLength
 defaultResolvers.maxProperties = defaultResolvers.maxLength
 
-function simplifier(rootSchema, options) {
+function simplifier(rootSchema, options, totalSchemas) {
+  totalSchemas = totalSchemas || []
   options = defaults(options, {
     resolvers: defaultResolvers
   })
 
-  function mergeSchemas(schemas, parentKey) {
-    var merged = {}
+  function mergeSchemas(schemas, parentKey, base) {
+    var merged = isPlainObject(base) ? base : {}
+
+    schemas = schemas.filter(function(schema) {
+      return isPlainObject(schema)
+    })
 
     var isProperties = parentKey === 'properties'
 
@@ -96,18 +109,22 @@ function simplifier(rootSchema, options) {
     })
 
     if (!isProperties && hasAllOf) {
-      return simplifier({
-        allOf: schemas
-      }, options)
+      merged.allOf = Array.isArray(merged.allOf) ? merged.allOf.concat(schemas) : schemas
+      return simplifier(merged, options, totalSchemas)
     }
 
-    allKeys = uniq(flattenDeep(schemas.map(function(schema) {
-      return schema ? Object.keys(schema) : []
-    })))
+    if (schemas.find(function(schema) {
+      return totalSchemas.indexOf(schema) !== -1
+    })) {
+      return merged
+    }
 
     allKeys.forEach(function(key) {
       if (parentKey === 'allOf') return
       var values = getValues(schemas, key)
+      var foundBase = totalSchemas.find(function(schema) {
+        return schema === base[key] && schema !== undefined && isPlainObject(schema)
+      })
 
       var hasFalse = values.some(function(val) {
         return val === false
@@ -117,6 +134,13 @@ function simplifier(rootSchema, options) {
         return val !== undefined
       }))
 
+      if (foundBase) {
+        merged[key] = foundBase
+        return
+      }
+
+      totalSchemas = totalSchemas.concat(schemas)
+
       var hasObjectValue = values.some(function(val) {
         return isPlainObject(val)
       })
@@ -124,15 +148,15 @@ function simplifier(rootSchema, options) {
       if (isProperties && hasFalse) {
         merged[key] = false
         return
-      } else if (hasObjectValue) {
-        merged[key] = mergeSchemas(compacted, key)
+      } else if ((hasObjectValue || isProperties) && key !== 'default') {
+        merged[key] = mergeSchemas(compacted, key, merged[key] || {})
         return
       }
 
       if (compacted.length === 1) {
         merged[key] = compacted[0]
       } else {
-        var resolver = options.resolvers[key] || options.resolvers.default
+        var resolver = options.resolvers[key] || options.resolvers.first
         merged[key] = resolver(schemas, values, compacted, key)
       }
     })
@@ -141,7 +165,7 @@ function simplifier(rootSchema, options) {
   }
 
   var allSchemas = flattenDeep(getAllOf(rootSchema))
-  var merged = mergeSchemas(allSchemas)
+  var merged = mergeSchemas(allSchemas, null, rootSchema)
   return merged
 }
 

@@ -1,5 +1,7 @@
 var chai = require('chai')
 var simplifier = require('../../src')
+var $RefParser = require('json-schema-ref-parser')
+var stringify = require('json-stringify-safe')
 
 var expect = chai.expect
 
@@ -19,6 +21,24 @@ describe('module', function() {
       type: 'text',
       minLength: 1,
       maxLength: 5
+    })
+  })
+
+  it('combines without allOf', function() {
+    var result = simplifier({
+      properties: {
+        foo: {
+          type: 'string'
+        }
+      }
+    })
+
+    expect(result).to.eql({
+      properties: {
+        foo: {
+          type: 'string'
+        }
+      }
     })
   })
 
@@ -243,6 +263,49 @@ describe('module', function() {
     })
   })
 
+  describe('merging arrays', function() {
+    it('merges required object', function() {
+      expect(simplifier({
+        required: ['prop2'],
+        allOf: [{
+          required: ['prop2', 'prop1']
+        }]
+      })).to.eql({
+        required: ['prop1', 'prop2']
+      })
+    })
+
+    it('merges default value', function() {
+      expect(simplifier({
+        default: ['prop2', {
+          prop1: 'foo'
+        }],
+        allOf: [{
+          default: ['prop2', 'prop1']
+        }]
+      })).to.eql({
+        default: ['prop2', {
+          prop1: 'foo'
+        }]
+      })
+    })
+
+    it('merges default value', function() {
+      expect(simplifier({
+        default: {
+          foo: 'bar'
+        },
+        allOf: [{
+          default: ['prop2', 'prop1']
+        }]
+      })).to.eql({
+        default: {
+          foo: 'bar'
+        }
+      })
+    })
+  })
+
   describe('merging objects', function() {
     it('merges child objects', function() {
       expect(simplifier({
@@ -433,6 +496,132 @@ describe('module', function() {
             maximum: 10
           }
         }
+      })
+    })
+  })
+
+  describe('merging definitions', function() {
+    it('merges circular', function() {
+      var schema = {
+        properties: {
+          person: {
+            properties: {
+              name: {
+                type: 'string',
+                minLength: 8
+              }
+            },
+            allOf: [{
+              properties: {
+                name: {
+                  minLength: 5,
+                  maxLength: 10
+                }
+              },
+              allOf: [{
+                properties: {
+                  prop1: {
+                    minLength: 7
+                  }
+                }
+              }]
+            }]
+          }
+        }
+      }
+
+      schema.properties.person.properties.child = schema.properties.person
+
+      var expected = {
+        person: {
+          properties: {
+            name: {
+              minLength: 8,
+              maxLength: 10,
+              type: 'string'
+            },
+            prop1: {
+              minLength: 7
+            }
+          }
+        }
+      }
+
+      expected.person.properties.child = expected.person
+
+      var result = simplifier(schema)
+
+      expect(result).to.eql({
+        properties: expected
+      })
+    })
+
+    it('merges any definitions and circular', function() {
+      var schema = {
+        properties: {
+          person: {
+            $ref: '#/definitions/person'
+          }
+        },
+        definitions: {
+          person: {
+            properties: {
+              name: {
+                type: 'string',
+                minLength: 8
+              },
+              child: {
+                $ref: '#/definitions/person'
+              }
+            },
+            allOf: [{
+              properties: {
+                name: {
+                  minLength: 5,
+                  maxLength: 10
+                }
+              },
+              allOf: [{
+                properties: {
+                  prop1: {
+                    minLength: 7
+                  }
+                }
+              }]
+            }]
+          }
+        }
+      }
+
+      return $RefParser.dereference(schema).then(function(dereferenced) {
+        var expected = {
+          person: {
+            properties: {
+              name: {
+                minLength: 8,
+                maxLength: 10,
+                type: 'string'
+              },
+              prop1: {
+                minLength: 7
+              }
+            }
+          }
+        }
+
+        expected.person.properties.child = expected.person
+
+        var result = simplifier(schema)
+
+        expect(result).to.eql({
+          properties: expected,
+          definitions: expected
+        })
+
+        expect(result).to.equal(dereferenced)
+
+        expect(result.properties.person.properties.child).to.equal(result.definitions.person.properties.child)
+        expect(result.properties.person.properties.child).to.equal(dereferenced.properties.person)
       })
     })
   })
