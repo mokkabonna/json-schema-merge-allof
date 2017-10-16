@@ -1,9 +1,12 @@
-// var flatten = require('lodash/flatten')
+var flatten = require('lodash/flatten')
 var flattenDeep = require('lodash/flattenDeep')
 var uniq = require('lodash/uniq')
+var uniqWith = require('lodash/uniqWith')
 var defaults = require('lodash/defaults')
-var omit = require('lodash/omit')
+var isEqual = require('lodash/isEqual')
+// var omit = require('lodash/omit')
 var intersection = require('lodash/intersection')
+var intersectionWith = require('lodash/intersectionWith')
 var isPlainObject = require('lodash/isPlainObject')
 var sortBy = require('lodash/sortBy')
 // var mergeWith = require('lodash/mergeWith')
@@ -54,7 +57,23 @@ var defaultResolvers = {
       }
     }
   },
-  first: function defaultResolver(schemas, values, compacted) {
+  oneOf: function(schemas, values, compacted, key) {
+    var oneOfs = intersectionWith.apply(null, compacted.concat(isEqual))
+    if (oneOfs.length) {
+      return sortBy(oneOfs)
+    } else {
+      throwIncompatible(compacted, key)
+    }
+  },
+  not: function(schemas, values, compacted) {
+    return {
+      allOf: compacted
+    }
+  },
+  anyOf: function(schemas, values, compacted) {
+    return flattenDeep(compacted)
+  },
+  first: function(schemas, values, compacted) {
     return compacted[0]
   },
   required: function(schemas, values, compacted, key) {
@@ -73,6 +92,14 @@ var defaultResolvers = {
   },
   const: function(schemas, values, compacted, key) {
     throwIncompatible(compacted, key)
+  },
+  enum: function(schemas, values, compacted, key) {
+    var enums = intersectionWith.apply(null, compacted.concat(isEqual))
+    if (enums.length) {
+      return sortBy(enums)
+    } else {
+      throwIncompatible(compacted, key)
+    }
   }
 }
 
@@ -138,9 +165,9 @@ function simplifier(rootSchema, options, totalSchemas) {
         return val === false
       })
 
-      var compacted = uniq(values.filter(function(val) {
+      var compacted = uniqWith(values.filter(function(val) {
         return val !== undefined
-      }))
+      }), isEqual)
 
       if (foundBase) {
         merged[key] = foundBase
@@ -153,10 +180,14 @@ function simplifier(rootSchema, options, totalSchemas) {
         return isPlainObject(val)
       })
 
-      if (isProperties && hasFalse) {
+      if (isProperties && hasFalse && key !== 'const') {
         merged[key] = false
         return
-      } else if ((hasObjectValue || isProperties) && key !== 'default') {
+      } else if (
+        (hasObjectValue || isProperties) &&
+        key !== 'default' &&
+        key !== 'not'
+      ) {
         merged[key] = mergeSchemas(compacted, key, merged[key] || {})
         return
       }

@@ -261,6 +261,177 @@ describe('module', function() {
         })
       }).to.throw(/incompatible/)
     })
+
+    it('merges enum', function() {
+      var result = simplifier({
+        allOf: [{
+
+        }, {
+          enum: ['string', 'null', 'object', {},
+            [2],
+            [1], null
+          ]
+        }, {
+          enum: ['string', {},
+            [1],
+            [1]
+          ]
+        }, {
+          enum: ['null', 'string', {},
+            [3],
+            [1], null
+          ]
+        }]
+      })
+
+      expect(result).to.eql({
+        enum: [
+          [1], {}, 'string'
+        ]
+      })
+    })
+
+    it('throws if enum is incompatible', function() {
+      expect(function() {
+        simplifier({
+          allOf: [{
+
+          }, {
+            enum: ['string', {}]
+          }, {
+            enum: [{}, 'string']
+          }]
+        })
+      }).not.to.throw(/incompatible/)
+
+      expect(function() {
+        simplifier({
+          allOf: [{
+
+          }, {
+            enum: ['string', {}]
+          }, {
+            enum: [[], false]
+          }]
+        })
+      }).to.throw(/incompatible/)
+    })
+
+    it('merges const', function() {
+      var result = simplifier({
+        allOf: [{
+
+        }, {
+          const: ['string', {}]
+        }, {
+          const: ['string', {}]
+        }]
+      })
+
+      expect(result).to.eql({
+        const: ['string', {}]
+      })
+    })
+
+    it('merges anyOf', function() {
+      var result = simplifier({
+        allOf: [{
+
+        }, {
+          anyOf: [{
+            require: ['123']
+          }]
+        }, {
+          anyOf: [{
+            require: ['324']
+          }]
+        }]
+      })
+
+      expect(result).to.eql({
+        anyOf: [{
+          require: ['123']
+        }, {
+          require: ['324']
+        }]
+      })
+    })
+
+    it('merges oneOf if equal', function() {
+      var result = simplifier({
+        allOf: [{
+
+        }, {
+          oneOf: [{
+            required: ['123']
+          }, {
+            properties: {
+              name: {
+                type: 'string'
+              }
+            }
+          }]
+        }, {
+          oneOf: [{
+            required: ['123']
+          }]
+        }]
+      })
+
+      expect(result).to.eql({
+        oneOf: [{
+          required: ['123']
+        }]
+      })
+    })
+
+    it('throws if no compatible when merging oneOf')
+
+    it('merges not using allOf', function() {
+      var result = simplifier({
+        allOf: [{
+
+        }, {
+          not: {
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'bar'
+              }
+            }
+          }
+        }, {
+          not: {
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'foo'
+              }
+            }
+          }
+        }]
+      })
+
+      expect(result).to.eql({
+        not: {
+          allOf: [{
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'bar'
+              }
+            }
+          }, {
+            properties: {
+              name: {
+                type: 'string',
+                pattern: 'foo'
+              }
+            }
+          }]
+        }
+      })
+    })
   })
 
   describe('merging arrays', function() {
