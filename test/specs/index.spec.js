@@ -410,6 +410,10 @@ describe('module', function() {
       })
 
       expect(simplifier({
+        allOf: [true, false]
+      })).to.eql(false)
+
+      expect(simplifier({
         properties: {
           name: true
         },

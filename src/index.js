@@ -94,6 +94,14 @@ function simplifier(rootSchema, options, totalSchemas) {
   function mergeSchemas(schemas, parentKey, base) {
     var merged = isPlainObject(base) ? base : {}
 
+    var hasFalse = schemas.some(function(schema) {
+      return schema === false
+    })
+
+    if (hasFalse) {
+      return false
+    }
+
     schemas = schemas.filter(function(schema) {
       return isPlainObject(schema)
     })
