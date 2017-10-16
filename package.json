@@ -1,0 +1,49 @@
+{
+  "name": "json-schema-simplifier",
+  "version": "0.1.0",
+  "description": "Simplify your schema by combining rules like allOf, patternProperties, dependencies.",
+  "main": "src/index.js",
+  "scripts": {
+    "eslint": "eslint src test",
+    "test": "npm run eslint && nyc --reporter=html --reporter=text mocha test/specs",
+    "develop": "mocha test/specs --recursive --watch",
+    "coverage": "nyc report --reporter=text-lcov | coveralls"
+  },
+  "directories": {
+    "lib": "src",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/github.com/mokkabonna.git"
+  },
+  "keywords": [
+    "json",
+    "schema",
+    "jsonschema"
+  ],
+  "author": "Martin Hansen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/github.com/mokkabonna/issues"
+  },
+  "homepage": "https://github.com/github.com/mokkabonna#readme",
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "coveralls": "^3.0.0",
+    "eslint": "^4.8.0",
+    "eslint-config": "^0.3.0",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-plugin-import": "^2.7.0",
+    "eslint-plugin-node": "^5.2.0",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-standard": "^3.0.1",
+    "json-schema-ref-parser": "^3.3.1",
+    "json-stringify-safe": "^5.0.1",
+    "mocha": "^4.0.1",
+    "nyc": "^11.2.1"
+  },
+  "dependencies": {
+    "lodash": "^4.17.4"
+  }
+}
