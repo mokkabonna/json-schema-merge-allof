@@ -341,22 +341,38 @@ describe('module', function() {
 
         }, {
           anyOf: [{
-            require: ['123']
+            required: ['123']
           }]
         }, {
           anyOf: [{
-            require: ['324']
+            required: ['123']
+          }, {
+            required: ['456']
           }]
         }]
       })
 
       expect(result).to.eql({
         anyOf: [{
-          require: ['123']
-        }, {
-          require: ['324']
+          required: ['123']
         }]
       })
+    })
+
+    it('throws if no intersection', function() {
+      expect(function() {
+        simplifier({
+          allOf: [{
+            anyOf: [{
+              required: ['123']
+            }]
+          }, {
+            anyOf: [{
+              required: ['456']
+            }]
+          }]
+        })
+      }).to.throw(/incompatible/)
     })
 
     it('merges oneOf if equal', function() {

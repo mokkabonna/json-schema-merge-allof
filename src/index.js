@@ -70,9 +70,6 @@ var defaultResolvers = {
       allOf: compacted
     }
   },
-  anyOf: function(schemas, values, compacted) {
-    return flattenDeep(compacted)
-  },
   first: function(schemas, values, compacted) {
     return compacted[0]
   },
@@ -117,6 +114,7 @@ defaultResolvers.additionalItems = defaultResolvers.not
 defaultResolvers.additionalProperties = function () {
   return !defaultResolvers.uniqueItems.apply(null, arguments)
 }
+defaultResolvers.anyOf = defaultResolvers.oneOf
 
 function simplifier(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
