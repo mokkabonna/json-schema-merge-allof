@@ -36,6 +36,10 @@ function throwIncompatible(values, key) {
   throw new Error('Values ' + values + ' for key ' + key + ' cant be merged. They are incompatible')
 }
 
+function schemaResolver(schemas, values, compacted, key, mergeSchemas, totalSchemas, parent) {
+  return mergeSchemas(compacted, key, parent || {})
+}
+
 var defaultResolvers = {
   type: function(schemas, values, compacted, key) {
     if (compacted.some(Array.isArray)) {
@@ -56,6 +60,35 @@ var defaultResolvers = {
         throwIncompatible(compacted, key)
       }
     }
+  },
+  properties: function(schemas, values, compacted, key, mergeSchemas, totalSchemas) {
+    var allProperties = uniq(flattenDeep(compacted.map(function(properties) {
+      return Object.keys(properties)
+    })))
+
+    if(!compacted.length) return
+
+    return allProperties.reduce(function(all, propKey) {
+      var propSchemas = getValues(compacted, propKey)
+
+      var innerCompacted = uniqWith(propSchemas.filter(function(val) {
+        return val !== undefined
+      }), isEqual)
+
+      var foundBase = totalSchemas.find(function(schema) {
+        return schema === all[propKey] && schema !== undefined && isPlainObject(schema)
+      })
+
+      if (foundBase) {
+        all[propKey] = foundBase
+        return all
+      }
+
+      totalSchemas.splice.apply(totalSchemas, [0,0].concat(innerCompacted))
+
+      all[propKey] = mergeSchemas(innerCompacted, 'properties', all[propKey] || {})
+      return all
+    }, compacted[0] || {})
   },
   oneOf: function(schemas, values, compacted, key) {
     var oneOfs = intersectionWith.apply(null, compacted.concat(isEqual))
@@ -111,10 +144,9 @@ defaultResolvers.maxProperties = defaultResolvers.maxLength
 defaultResolvers.contains = defaultResolvers.not
 defaultResolvers.pattern = defaultResolvers.not
 defaultResolvers.additionalItems = defaultResolvers.not
-defaultResolvers.additionalProperties = function () {
-  return !defaultResolvers.uniqueItems.apply(null, arguments)
-}
 defaultResolvers.anyOf = defaultResolvers.oneOf
+defaultResolvers.additionalProperties = schemaResolver
+defaultResolvers.definitions = defaultResolvers.properties
 
 function simplifier(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
@@ -133,7 +165,6 @@ function simplifier(rootSchema, options, totalSchemas) {
     if (incompatibleSchemas && schemas.length > 1 && !options.combineAdditionalProperties) {
       throw new Error('One of your schemas has additionalProperties set to false. You have an invalid schema. Override by using option combineAdditionalProperties:true')
     }
-
     var hasFalse = schemas.some(function(schema) {
       return schema === false
     })
@@ -146,8 +177,6 @@ function simplifier(rootSchema, options, totalSchemas) {
       return isPlainObject(schema)
     })
 
-    var isProperties = parentKey === 'properties'
-
     var allKeys = uniq(flattenDeep(schemas.map(function(schema) {
       return schema ? Object.keys(schema) : []
     })))
@@ -156,58 +185,19 @@ function simplifier(rootSchema, options, totalSchemas) {
       return key === 'allOf'
     })
 
-    if (!isProperties && hasAllOf) {
+    if (hasAllOf) {
       merged.allOf = Array.isArray(merged.allOf) ? merged.allOf.concat(schemas) : schemas
       return simplifier(merged, options, totalSchemas)
     }
 
-    if (schemas.find(function(schema) {
-      return totalSchemas.indexOf(schema) !== -1
-    })) {
-      return merged
-    }
-
     allKeys.forEach(function(key) {
-      if (parentKey === 'allOf') return
       var values = getValues(schemas, key)
-      var foundBase = totalSchemas.find(function(schema) {
-        return schema === base[key] && schema !== undefined && isPlainObject(schema)
-      })
-
-      var hasFalse = values.some(function(val) {
-        return val === false
-      })
 
       var compacted = uniqWith(values.filter(function(val) {
         return val !== undefined
       }), isEqual)
 
-      if (foundBase) {
-        merged[key] = foundBase
-        return
-      }
-
-      totalSchemas = totalSchemas.concat(schemas)
-
-      var hasObjectValue = values.some(function(val) {
-        return isPlainObject(val)
-      })
-
-      if (isProperties && hasFalse && key !== 'const') {
-        merged[key] = false
-        return
-      } else if (
-        (hasObjectValue || isProperties) &&
-        key !== 'default' &&
-        key !== 'contains' &&
-        key !== 'additionalItems' &&
-        key !== 'not'
-      ) {
-        merged[key] = mergeSchemas(compacted, key, merged[key] || {})
-        return
-      }
-
-      if (compacted.length === 1) {
+      if (compacted.length === 1 && key !== 'properties') {
         merged[key] = compacted[0]
       } else if (key === 'pattern') {
         merged.allOf = compacted.map(function(regexp) {
@@ -223,7 +213,7 @@ function simplifier(rootSchema, options, totalSchemas) {
         })
       } else {
         var resolver = options.resolvers[key] || options.resolvers.first
-        merged[key] = resolver(schemas, values, compacted, key)
+        merged[key] = resolver(schemas, values, compacted, key, mergeSchemas, totalSchemas, merged[key] || {})
       }
     })
 
