@@ -557,6 +557,8 @@ describe('module', function() {
       })
     })
 
+    it('merges multipleOf by finding common factor')
+
     it('merges multipleOf using allOf', function() {
       var result = simplifier({
         allOf: [{
@@ -951,6 +953,76 @@ describe('module', function() {
 
         expect(result.properties.person.properties.child).to.equal(result.definitions.person.properties.child)
         expect(result.properties.person.properties.child).to.equal(dereferenced.properties.person)
+      })
+    })
+  })
+
+  describe('additionalProperties', function() {
+    it('throws if additionalProperties is false', function() {
+      expect(function() {
+        simplifier({
+          allOf: [{
+            additionalProperties: true
+          }, {
+            additionalProperties: false
+          }]
+        })
+      }).to.throw(/additionalProperties/)
+    })
+
+    it('does not throw if option combineAdditionalProperties is true', function() {
+      var result
+      expect(function() {
+        result = simplifier({
+          allOf: [{
+            additionalProperties: true
+          }, {
+            additionalProperties: false
+          }]
+        }, {
+          combineAdditionalProperties: true
+        })
+      }).not.to.throw(/additionalProperties/)
+
+      expect(result).to.eql({
+        additionalProperties: false
+      })
+
+      var result2 = simplifier({
+        allOf: [{
+          additionalProperties: true
+        }, {
+          additionalProperties: true
+        }]
+      })
+
+
+      expect(result2).to.eql({
+        additionalProperties: true
+      })
+    })
+
+    it('combines additionalProperties when schemas', function() {
+      var result = simplifier({
+        additionalProperties: true,
+        allOf: [{
+          additionalProperties: {
+            type: ['string', 'null'],
+            maxLength: 10
+          }
+        }, {
+          additionalProperties: {
+            type: ['string', 'integer', 'null'],
+            maxLength: 8
+          }
+        }]
+      })
+
+      expect(result).to.eql({
+        additionalProperties: {
+          type: ['string', 'null'],
+          maxLength: 8
+        }
       })
     })
   })

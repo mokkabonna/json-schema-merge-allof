@@ -114,15 +114,27 @@ defaultResolvers.maxProperties = defaultResolvers.maxLength
 defaultResolvers.contains = defaultResolvers.not
 defaultResolvers.pattern = defaultResolvers.not
 defaultResolvers.additionalItems = defaultResolvers.not
+defaultResolvers.additionalProperties = function () {
+  return !defaultResolvers.uniqueItems.apply(null, arguments)
+}
 
 function simplifier(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
   options = defaults(options, {
+    combineAdditionalProperties: false,
     resolvers: defaultResolvers
   })
 
   function mergeSchemas(schemas, parentKey, base) {
     var merged = isPlainObject(base) ? base : {}
+
+    var incompatibleSchemas = schemas.some(function(schema) {
+      return isPlainObject(schema) && schema.additionalProperties === false
+    })
+
+    if (incompatibleSchemas && schemas.length > 1 && !options.combineAdditionalProperties) {
+      throw new Error('One of your schemas has additionalProperties set to false. You have an invalid schema. Override by using option combineAdditionalProperties:true')
+    }
 
     var hasFalse = schemas.some(function(schema) {
       return schema === false
