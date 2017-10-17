@@ -1,1 +1,1 @@
-# json-schema-simplifier
+# json-schema-simplify
