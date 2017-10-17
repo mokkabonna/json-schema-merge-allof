@@ -40,6 +40,8 @@ function schemaResolver(schemas, values, compacted, key, mergeSchemas, totalSche
   return mergeSchemas(compacted, key, parent || {})
 }
 
+// maybe not add dependencies
+var schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
 var defaultResolvers = {
   type: function(schemas, values, compacted, key) {
     if (compacted.some(Array.isArray)) {
@@ -86,7 +88,7 @@ var defaultResolvers = {
 
       totalSchemas.splice.apply(totalSchemas, [0,0].concat(innerCompacted))
 
-      all[propKey] = mergeSchemas(innerCompacted, 'properties', all[propKey] || {})
+      all[propKey] = mergeSchemas(innerCompacted, all[propKey] || {})
       return all
     }, compacted[0] || {})
   },
@@ -155,7 +157,7 @@ function simplifier(rootSchema, options, totalSchemas) {
     resolvers: defaultResolvers
   })
 
-  function mergeSchemas(schemas, parentKey, base) {
+  function mergeSchemas(schemas, base) {
     var merged = isPlainObject(base) ? base : {}
 
     var incompatibleSchemas = schemas.some(function(schema) {
@@ -165,6 +167,7 @@ function simplifier(rootSchema, options, totalSchemas) {
     if (incompatibleSchemas && schemas.length > 1 && !options.combineAdditionalProperties) {
       throw new Error('One of your schemas has additionalProperties set to false. You have an invalid schema. Override by using option combineAdditionalProperties:true')
     }
+
     var hasFalse = schemas.some(function(schema) {
       return schema === false
     })
@@ -197,7 +200,8 @@ function simplifier(rootSchema, options, totalSchemas) {
         return val !== undefined
       }), isEqual)
 
-      if (compacted.length === 1 && key !== 'properties') {
+      //prop groups must always be resolved
+      if (compacted.length === 1 && schemaGroupProps.indexOf(key) === -1) {
         merged[key] = compacted[0]
       } else if (key === 'pattern') {
         merged.allOf = compacted.map(function(regexp) {
@@ -221,7 +225,7 @@ function simplifier(rootSchema, options, totalSchemas) {
   }
 
   var allSchemas = flattenDeep(getAllOf(rootSchema))
-  var merged = mergeSchemas(allSchemas, null, rootSchema)
+  var merged = mergeSchemas(allSchemas, rootSchema)
   return merged
 }
 
