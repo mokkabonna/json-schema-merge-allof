@@ -1,4 +1,5 @@
 var chai = require('chai')
+var _ = require('lodash')
 var simplifier = require('../../src')
 var $RefParser = require('json-schema-ref-parser')
 var stringify = require('json-stringify-safe')
@@ -388,10 +389,14 @@ describe('module', function() {
                 type: 'string'
               }
             }
+          }, {
+            required: ['abc']
           }]
         }, {
           oneOf: [{
             required: ['123']
+          }, {
+            required: ['abc']
           }]
         }]
       })
@@ -399,11 +404,101 @@ describe('module', function() {
       expect(result).to.eql({
         oneOf: [{
           required: ['123']
+        }, {
+          required: ['abc']
         }]
       })
     })
 
-    it('throws if no compatible when merging oneOf')
+    it('throws if no compatible when merging oneOf', function() {
+      expect(function() {
+        simplifier({
+          allOf: [{
+
+          }, {
+            oneOf: [{
+              required: ['123']
+            }]
+          }, {
+            oneOf: [{
+              required: ['fdasfd']
+            }]
+          }]
+        })
+      }).to.throw(/incompatible/)
+
+      expect(function() {
+        simplifier({
+          allOf: [{
+
+          }, {
+            oneOf: [{
+              required: ['123']
+            }, {
+              properties: {
+                name: {
+                  type: 'string'
+                }
+              }
+            }]
+          }, {
+            oneOf: [{
+              required: ['fdasfd']
+            }]
+          }]
+        })
+      }).to.throw(/incompatible/)
+    })
+
+    // not ready to implement this yet
+    it.skip('merges singular oneOf', function() {
+      var result = simplifier({
+        properties: {
+          name: {
+            type: 'string'
+          }
+        },
+        allOf: [{
+          properties: {
+            name: {
+              type: 'string',
+              minLength: 10
+            }
+          }
+        }, {
+          oneOf: [{
+            required: ['123']
+          }, {
+            properties: {
+              name: {
+                type: 'string',
+                minLength: 15
+              }
+            }
+          }]
+        }, {
+          oneOf: [{
+            required: ['abc']
+          }, {
+            properties: {
+              name: {
+                type: 'string',
+                minLength: 15
+              }
+            }
+          }]
+        }]
+      })
+
+      expect(result).to.eql({
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 15
+          }
+        }
+      })
+    })
 
     it('merges not using allOf', function() {
       var result = simplifier({
@@ -573,9 +668,79 @@ describe('module', function() {
       })
     })
 
-    it('merges multipleOf by finding common factor')
+    it.skip('merges multipleOf by finding common lowest number', function() {
+      var result = simplifier({
+        allOf: [{
 
-    it('merges multipleOf using allOf', function() {
+        }, {
+          multipleOf: 0.2,
+          allOf: [{
+            multipleOf: 2,
+            allOf: [{
+              multipleOf: 2,
+              allOf: [{
+                multipleOf: 2,
+                allOf: [{
+                  multipleOf: 3,
+                  allOf: [{
+                    multipleOf: 1.5,
+                    allOf: [{
+                      multipleOf: 0.5
+                    }]
+                  }]
+                }]
+              }]
+            }]
+          }]
+        }, {
+          multipleOf: 0.3
+        }]
+      })
+
+      expect(result).to.eql({
+        multipleOf: 54
+      })
+
+      expect(simplifier({
+        allOf: [{
+          multipleOf: 4
+        }, {
+          multipleOf: 15
+        }, {
+          multipleOf: 3
+        }]
+      })).to.eql({
+        multipleOf: 45
+      })
+
+      expect(simplifier({
+        allOf: [{
+          multipleOf: 0.3
+        }, {
+          multipleOf: 0.7
+        }]
+      })).to.eql({
+        multipleOf: 2.1
+      })
+
+      expect(simplifier({
+        allOf: [{
+          multipleOf: 100
+        }, {
+          multipleOf: 500
+        }]
+      })).to.eql({
+        multipleOf: 500
+      })
+
+      // console.log(1.2 / 0.3)
+      // console.log((0.25 * 10) * (0.75 * 10) * (0.0004 * 10000) * (0.0001 * 10000))
+      // console.log((0.7 * 10) * (0.3 * 10)) // 2
+      // console.log(21 / (0.7 * 10) * 10)
+      // console.log(21 / (0.3 * 10) * 10)
+    })
+
+    it.skip('merges multipleOf using allOf', function() {
       var result = simplifier({
         allOf: [{
 
@@ -1012,7 +1177,6 @@ describe('module', function() {
         }]
       })
 
-
       expect(result2).to.eql({
         additionalProperties: true
       })
@@ -1039,6 +1203,182 @@ describe('module', function() {
           type: ['string', 'null'],
           maxLength: 8
         }
+      })
+    })
+  })
+
+  describe('patternProperties', function() {
+    it('merges simliar schemas', function() {
+      var result = simplifier({
+        patternProperties: {
+          '^\\$.+': {
+            type: ['string', 'null', 'integer'],
+            allOf: [{
+              minimum: 5
+            }]
+          }
+        },
+        allOf: [{
+          patternProperties: {
+            '^\\$.+': {
+              type: ['string', 'null'],
+              allOf: [{
+                minimum: 7
+              }]
+            },
+            '.*': {
+              type: 'null'
+            }
+          }
+        }]
+      })
+
+      expect(result).to.eql({
+        patternProperties: {
+          '^\\$.+': {
+            type: ['string', 'null'],
+            minimum: 7
+          },
+          '.*': {
+            type: 'null'
+          }
+        }
+      })
+    })
+  })
+
+  describe('dependencies', function() {
+    it('merges simliar schemas', function() {
+      var result = simplifier({
+        dependencies: {
+          'foo': {
+            type: ['string', 'null', 'integer'],
+            allOf: [{
+              minimum: 5
+            }]
+          },
+          'bar': ['prop1', 'prop2']
+        },
+        allOf: [{
+          dependencies: {
+            'foo': {
+              type: ['string', 'null'],
+              allOf: [{
+                minimum: 7
+              }]
+            },
+            'bar': ['prop4']
+          }
+        }]
+      })
+
+      expect(result).to.eql({
+        dependencies: {
+          'foo': {
+            type: ['string', 'null'],
+            minimum: 7
+          },
+          'bar': ['prop1', 'prop2', 'prop4']
+        }
+      })
+    })
+  })
+
+  describe('propertyNames', function() {
+    it('merges simliar schemas', function() {
+      var result = simplifier({
+        propertyNames: {
+          type: 'string',
+          allOf: [{
+            minLength: 5
+          }]
+        },
+        allOf: [{
+          propertyNames: {
+            type: 'string',
+            pattern: 'abc.*',
+            allOf: [{
+              maxLength: 7
+            }]
+          }
+        }]
+      })
+
+      expect(result).to.eql({
+        propertyNames: {
+          type: 'string',
+          pattern: 'abc.*',
+          minLength: 5,
+          maxLength: 7
+        }
+      })
+    })
+  })
+
+  describe('items', function() {
+    describe('when single schema', function() {
+      it('merges them', function() {
+        var result = simplifier({
+          items: {
+            type: 'string',
+            allOf: [{
+              minLength: 5
+            }]
+          },
+          allOf: [{
+            items: {
+              type: 'string',
+              pattern: 'abc.*',
+              allOf: [{
+                maxLength: 7
+              }]
+            }
+          }]
+        })
+
+        expect(result).to.eql({
+          items: {
+            type: 'string',
+            pattern: 'abc.*',
+            minLength: 5,
+            maxLength: 7
+          }
+        })
+      })
+    })
+
+    describe('when array', function() {
+      it('merges them if possible', function() {
+        var result = simplifier({
+          items: [{
+            type: 'string',
+            allOf: [{
+              minLength: 5
+            }]
+          }],
+          allOf: [{
+            items: [{
+              type: 'string',
+              pattern: 'abc.*',
+              allOf: [{
+                maxLength: 7
+              }]
+            }, {
+              type: 'integer'
+            }]
+          }]
+        })
+
+        expect(result).to.eql({
+          items: [{
+            type: 'string',
+            pattern: 'abc.*',
+            minLength: 5,
+            maxLength: 7
+          }, {
+            type: 'integer'
+          }]
+        })
       })
     })
   })
