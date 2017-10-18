@@ -517,6 +517,36 @@ describe('module', function() {
                 }]
               }
             ]
+          },
+          {
+            type: ['array', 'string']
+          }
+        ]
+      })
+
+      expect(result).to.eql({
+        type: ['array', 'string'],
+        oneOf: [
+          {
+            required: ['123', '768']
+          }
+        ]
+      })
+    })
+
+    it('merges nested allOf if inside multiple oneOf', function() {
+      var result = simplifier({
+        allOf: [
+          {
+            type: ['array', 'string', 'number'],
+            oneOf: [
+              {
+                required: ['123'],
+                allOf: [{
+                  required: ['768']
+                }]
+              }
+            ]
           }, {
             type: ['array', 'string'],
             oneOf: [

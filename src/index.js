@@ -4,7 +4,7 @@ var uniq = require('lodash/uniq')
 var uniqWith = require('lodash/uniqWith')
 var defaults = require('lodash/defaults')
 var isEqual = require('lodash/isEqual')
-var difference = require('lodash/difference')
+// var difference = require('lodash/difference')
 // var omit = require('lodash/omit')
 var intersection = require('lodash/intersection')
 var intersectionWith = require('lodash/intersectionWith')
@@ -53,45 +53,45 @@ function notUndefined(val) {
   return val !== undefined
 }
 
-var allKeywords = [
-  '$id',
-  '$schema',
-  '$ref',
-  'title',
-  'description',
-  'default',
-  'multipleOf',
-  'maximum',
-  'exclusiveMaximum',
-  'minimum',
-  'exclusiveMinimum',
-  'maxLength',
-  'minLength',
-  'pattern',
-  'additionalItems',
-  'items',
-  'maxItems',
-  'minItems',
-  'uniqueItems',
-  'contains',
-  'maxProperties',
-  'minProperties',
-  'required',
-  'additionalProperties',
-  'definitions',
-  'properties',
-  'patternProperties',
-  'dependencies',
-  'propertyNames',
-  'const',
-  'enum',
-  'type',
-  'format',
-  'allOf',
-  'anyOf',
-  'oneOf',
-  'not'
-]
+// var allKeywords = [
+//   '$id',
+//   '$schema',
+//   '$ref',
+//   'title',
+//   'description',
+//   'default',
+//   'multipleOf',
+//   'maximum',
+//   'exclusiveMaximum',
+//   'minimum',
+//   'exclusiveMinimum',
+//   'maxLength',
+//   'minLength',
+//   'pattern',
+//   'additionalItems',
+//   'items',
+//   'maxItems',
+//   'minItems',
+//   'uniqueItems',
+//   'contains',
+//   'maxProperties',
+//   'minProperties',
+//   'required',
+//   'additionalProperties',
+//   'definitions',
+//   'properties',
+//   'patternProperties',
+//   'dependencies',
+//   'propertyNames',
+//   'const',
+//   'enum',
+//   'type',
+//   'format',
+//   'allOf',
+//   'anyOf',
+//   'oneOf',
+//   'not'
+// ]
 
 // maybe not add dependencies
 var schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
@@ -104,6 +104,7 @@ var schemaProps = [
   'items'
 ]
 var schemaArrays = ['anyOf', 'oneOf']
+
 var defaultResolvers = {
   type: function(compacted, key) {
     if (compacted.some(Array.isArray)) {
@@ -164,7 +165,16 @@ var defaultResolvers = {
       return all
     }, compacted[0] || {})
   },
-  items: function(compacted, key, mergeSchemas, totalSchemas) {
+  items: function(compacted, key, mergeSchemas) {
+    function getAllSchemas(arrayOfArrays, pos, max) {
+      var all = []
+      for (var i = 0; i < max; i++) {
+        all.push(arrayOfArrays[i][pos])
+      }
+
+      return flatten(all)
+    }
+
     if (compacted.every(isSchema)) {
       return schemaResolver.apply(null, arguments)
     } else if (compacted.every(Array.isArray)) {
@@ -172,15 +182,6 @@ var defaultResolvers = {
       var max = compacted.reduce(function(sum, b) {
         return Math.max(sum, b.length)
       }, 0)
-
-      function getAllSchemas(arrayOfArrays, pos, max) {
-        var all = []
-        for (var i = 0; i < max; i++) {
-          all.push(arrayOfArrays[i][pos])
-        }
-
-        return flatten(all)
-      }
 
       return compacted.reduce(function(all, items, pos) {
         var schemasAtCurrentPos = uniqWith(getAllSchemas(compacted, pos, max).filter(notUndefined), isEqual)
@@ -197,15 +198,6 @@ var defaultResolvers = {
     }
   },
   oneOf: function(compacted, key, mergeSchemas, totalSchemas, something, reportUnresolved) {
-    // TODO check intersection of schemas when multiple
-    // if (compacted.length === 1) {
-    //   return compacted[0].map(function(schema) {
-    //     return mergeSchemas([schema], schema)
-    //   })
-    // } else {
-    //   throwIncompatible(compacted, key)
-    // }
-
     var unresolved = compacted.map(function(anyOfGroup) {
       return {
         [key]: anyOfGroup.map(function(schema) {
@@ -213,7 +205,6 @@ var defaultResolvers = {
         })
       }
     })
-    console.log(unresolved)
     reportUnresolved(unresolved)
   },
   not: function(compacted) {
@@ -222,7 +213,7 @@ var defaultResolvers = {
   first: function(compacted) {
     return compacted[0]
   },
-  required: function(compacted, key) {
+  required: function(compacted) {
     return stringArray(compacted)
   },
   minLength: function(compacted) {
@@ -231,7 +222,7 @@ var defaultResolvers = {
   maxLength: function(compacted) {
     return Math.min.apply(Math, compacted)
   },
-  uniqueItems: function(compacted, key) {
+  uniqueItems: function(compacted) {
     return compacted.some(function(val) {
       return val === true
     })
@@ -335,8 +326,13 @@ function simplifier(rootSchema, options, totalSchemas) {
 
       var compacted = uniqWith(values.filter(notUndefined), isEqual)
 
+      // arrayprops like anyOf and oneOf must be merged first, as they contains schemas
+      if (compacted.length === 1 && schemaArrays.indexOf(key) !== -1) {
+        merged[key] = compacted[0].map(function(schema) {
+          return mergeSchemas([schema], schema)
+        })
       // prop groups must always be resolved
-      if (compacted.length === 1 && schemaGroupProps.indexOf(key) === -1 && schemaProps.indexOf(key) === -1) {
+      } else if (compacted.length === 1 && schemaGroupProps.indexOf(key) === -1 && schemaProps.indexOf(key) === -1) {
         merged[key] = compacted[0]
       } else if (key === 'pattern') {
         merged.allOf = mergeWithArray(merged.allOf, compacted.map(function(regexp) {
