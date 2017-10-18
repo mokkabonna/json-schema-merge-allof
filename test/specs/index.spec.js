@@ -710,7 +710,7 @@ describe('module', function() {
           multipleOf: 3
         }]
       })).to.eql({
-        multipleOf: 45
+        multipleOf: 60
       })
 
       expect(simplifier({
@@ -718,6 +718,8 @@ describe('module', function() {
           multipleOf: 0.3
         }, {
           multipleOf: 0.7
+        }, {
+          multipleOf: 1
         }]
       })).to.eql({
         multipleOf: 2.1
@@ -725,19 +727,74 @@ describe('module', function() {
 
       expect(simplifier({
         allOf: [{
-          multipleOf: 100
+          multipleOf: 0.5
         }, {
-          multipleOf: 500
+          multipleOf: 2
         }]
       })).to.eql({
-        multipleOf: 500
+        multipleOf: 2
       })
 
-      // console.log(1.2 / 0.3)
-      // console.log((0.25 * 10) * (0.75 * 10) * (0.0004 * 10000) * (0.0001 * 10000))
-      // console.log((0.7 * 10) * (0.3 * 10)) // 2
-      // console.log(21 / (0.7 * 10) * 10)
-      // console.log(21 / (0.3 * 10) * 10)
+      expect(simplifier({
+        allOf: [{
+          multipleOf: 0.3
+        }, {
+          multipleOf: 0.5
+        }, {
+          multipleOf: 1
+        }]
+      })).to.eql({
+        multipleOf: 3
+      })
+
+      expect(simplifier({
+        allOf: [{
+          multipleOf: 0.3
+        }, {
+          multipleOf: 0.7
+        }, {
+          multipleOf: 1
+        }]
+      })).to.eql({
+        multipleOf: 21
+      })
+
+      expect(simplifier({
+        allOf: [{
+          multipleOf: 0.4
+        }, {
+          multipleOf: 0.7
+        }, {
+          multipleOf: 3
+        }]
+      })).to.eql({
+        multipleOf: 84
+      })
+
+      console.log(20 * 85 * 100 * 100)
+      expect(simplifier({
+        allOf: [{
+          multipleOf: 0.2
+        }, {
+          multipleOf: 0.85
+        }, {
+          multipleOf: 1
+        }]
+      })).to.eql({
+        multipleOf: 84
+      })
+
+      expect(simplifier({
+        allOf: [{
+          multipleOf: 100000
+        }, {
+          multipleOf: 1000000
+        }, {
+          multipleOf: 500000
+        }]
+      })).to.eql({
+        multipleOf: 100000000000
+      })
     })
 
     it.skip('merges multipleOf using allOf', function() {

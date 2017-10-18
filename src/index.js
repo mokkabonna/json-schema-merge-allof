@@ -203,69 +203,77 @@ var defaultResolvers = {
     throwIncompatible(compacted, key)
   },
   multipleOf: function(schemas, values, compacted, key) {
-    var factors = 1
-    var integers = compacted.map(function(num) {
-      if (Number.isInteger(num)) return num
-
-      for (var i = 10; i < 1000; i += 10) {
+    var factors = 0
+    compacted.forEach(function(num) {
+      if (Number.isInteger(num)) return
+      // 100 precition
+      for (var i = 1; i < 100; i += 1) {
         num = num * 10
         factors = Math.max(i, factors)
         if (Number.isInteger(num)) {
-          // factors = factors * 10
           return num
         }
       }
-      return Math.round(num)
-    }).sort()
+    })
 
-    console.log(factors)
+    console.log(compacted)
+    var integers = compacted.map(function(num) {
+      if (!Number.isInteger(num)) {
+        var divider = 1
+        for (var i = 0; i < factors; i++) {
+          divider = divider * 10
+        }
+        return num * divider
+      } else {
+        return num
+      }
+    })
+    console.log(integers)
 
-    var sum = integers.reduce(function(sum, next) {
+    var divider = 1
+    for (var i = 0; i < factors; i++) {
+      divider = divider * 10
+    }
+
+    var max = integers.reduce(function(sum, next) {
       return sum * next
     })
 
-    console.log(integers.every(function(num) {
-      return Number.isInteger(num / 15)
-    }))
-
-    console.log(sum)
-
+    var copy = integers.slice(0).sort()
     var currentTry
-    while (currentTry = integers.pop()) {
-      var test = sum / currentTry
-      console.log(test, 'test')
+    while (currentTry = copy.pop()) {
+      var test = max / currentTry
       var result = integers.every(function(num) {
         return Number.isInteger(parseFloat((test / num).toFixed(5)))
       })
 
-      console.log(test)
-      console.log(factors)
+      console.log(integers, max, test, divider)
 
-      if (result) return currentTry
+      if (result) return test / divider
     }
-    return currentTry
+    return max / divider
 
-    console.log(integers)
-    console.log(factors)
-    console.log(sum)
-
-    function getIntegersForNum(numbers) {
-      for (var i = 1; i < 10000; i += 0.1) {
-        if (i === 0) continue
-        var result = numbers.every(function(num) {
-          return Number.isInteger(parseFloat((i / num).toFixed(5)))
-        })
-
-        if (result) {
-          return parseFloat(i.toFixed(4))
-        }
-      }
-    }
-
-    var result = getIntegersForNum(compacted)
-    if (!result) throw new Error('Could ot find a common number for multipleOf values: ' + compacted.join(', '))
-
-    return result
+    // console.log(integers)
+    // console.log(factors)
+    // console.log(max)
+    //
+    // function getIntegersForNum(numbers) {
+    //   for (var i = 1; i < 10000; i += 0.1) {
+    //     if (i === 0) continue
+    //     var result = numbers.every(function(num) {
+    //       return Number.isInteger(parseFloat((i / num).toFixed(5)))
+    //     })
+    //
+    //     if (result) {
+    //       return parseFloat(i.toFixed(4))
+    //     }
+    //   }
+    // }
+    //
+    // var result = getIntegersForNum(compacted)
+    // if (!result) throw new Error('Could ot find a common number for multipleOf values: ' + compacted.join(', '))
+    //
+    // return result
   },
   enum: function(schemas, values, compacted, key) {
     var enums = intersectionWith.apply(null, compacted.concat(isEqual))
