@@ -42,7 +42,7 @@ function throwIncompatible(values, key) {
 }
 
 function schemaResolver(schemas, values, compacted, key, mergeSchemas, totalSchemas, parent) {
-  return mergeSchemas(compacted, key, parent || {})
+  return mergeSchemas(compacted, parent || {})
 }
 
 function stringArray(values) {
@@ -95,6 +95,7 @@ var allKeywords = [
 
 // maybe not add dependencies
 var schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
+var schemaProps = ['additionalProperties', 'additionalItems', 'contains', 'propertyNames', 'not', 'items', 'oneOf', 'anyOf']
 var defaultResolvers = {
   type: function(schemas, values, compacted, key) {
     if (compacted.some(Array.isArray)) {
@@ -147,8 +148,7 @@ var defaultResolvers = {
       }
 
       totalSchemas.splice.apply(totalSchemas, [0, 0].concat(innerCompacted))
-
-      all[propKey] = mergeSchemas(innerCompacted, all[propKey] || {})
+      all[propKey] = mergeSchemas(innerCompacted, all[propKey] || {}, true)
       return all
     }, compacted[0] || {})
   },
@@ -156,12 +156,28 @@ var defaultResolvers = {
     if (compacted.every(isSchema)) {
       return schemaResolver.apply(null, arguments)
     } else if (compacted.every(Array.isArray)) {
-      return compacted.reduce(function(all, items, pos) {
-        var schemasAtCurrentPos = uniqWith(compacted.map(function(items) {
-          return items[pos]
-        }).filter(notUndefined), isEqual)
+      //TODO get max items
+      var max = compacted.reduce(function (sum, b) {
+        return Math.max(sum, b.length)
+      }, 0)
 
-        all[pos] = mergeSchemas(schemasAtCurrentPos, schemasAtCurrentPos[0] || {})
+      function getAllSchemas(arrayOfArrays, pos, max) {
+        var all = []
+        for (var i = 0; i < max; i++) {
+          all.push(arrayOfArrays[i][pos])
+
+        }
+
+        return flatten(all)
+      }
+
+      return compacted.reduce(function(all, items, pos) {
+        var schemasAtCurrentPos = uniqWith(getAllSchemas(compacted, pos, max).filter(notUndefined), isEqual)
+
+        if(schemasAtCurrentPos.length !== 1){
+          throwIncompatible(schemasAtCurrentPos, key)
+        }
+        all[pos] = mergeSchemas(schemasAtCurrentPos, schemasAtCurrentPos[0])
         return all
       }, compacted[0])
     } else {
@@ -170,9 +186,11 @@ var defaultResolvers = {
     }
   },
   oneOf: function(schemas, values, compacted, key, mergeSchemas, totalSchemas) {
-    var oneOfs = intersectionWith.apply(null, compacted.concat(isEqual))
-    if (oneOfs.length) {
-      return sortBy(oneOfs)
+    //TODO check intersection of schemas when multiple
+    if (compacted.length === 1) {
+      return compacted[0].map(function (schema) {
+        return mergeSchemas([schema], schema)
+      })
     } else {
       throwIncompatible(compacted, key)
     }
@@ -216,7 +234,6 @@ var defaultResolvers = {
       }
     })
 
-    console.log(compacted)
     var integers = compacted.map(function(num) {
       if (!Number.isInteger(num)) {
         var divider = 1
@@ -228,7 +245,6 @@ var defaultResolvers = {
         return num
       }
     })
-    console.log(integers)
 
     var divider = 1
     for (var i = 0; i < factors; i++) {
@@ -247,7 +263,6 @@ var defaultResolvers = {
         return Number.isInteger(parseFloat((test / num).toFixed(5)))
       })
 
-      console.log(integers, max, test, divider)
 
       if (result) return test / divider
     }
@@ -310,7 +325,7 @@ defaultResolvers.patternProperties = defaultResolvers.properties
 defaultResolvers.dependencies = defaultResolvers.properties
 
 // unsupported:
-console.log(difference(allKeywords, Object.keys(defaultResolvers)))
+// console.log(difference(allKeywords, Object.keys(defaultResolvers)))
 
 function simplifier(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
@@ -319,7 +334,7 @@ function simplifier(rootSchema, options, totalSchemas) {
     resolvers: defaultResolvers
   })
 
-  function mergeSchemas(schemas, base) {
+  function mergeSchemas(schemas, base, isGroup) {
     var merged = isPlainObject(base) ? base : {}
 
     var incompatibleSchemas = schemas.some(function(schema) {
@@ -336,6 +351,14 @@ function simplifier(rootSchema, options, totalSchemas) {
 
     if (hasFalse) {
       return false
+    }
+
+    var allTrue = schemas.every(function(schema) {
+      return schema === true
+    })
+
+    if (allTrue) {
+      return true
     }
 
     schemas = schemas.filter(function(schema) {
@@ -361,8 +384,17 @@ function simplifier(rootSchema, options, totalSchemas) {
       var compacted = uniqWith(values.filter(notUndefined), isEqual)
 
       // prop groups must always be resolved
-      if (compacted.length === 1 && schemaGroupProps.indexOf(key) === -1) {
-        merged[key] = compacted[0]
+      if (compacted.length === 1 && schemaGroupProps.indexOf(key) === -1 && schemaProps.indexOf(key) === -1) {
+
+        var first = compacted[0]
+        //if(key === 'items') console.log(first)
+        // if (schemaProps.indexOf(key) !== -1) {
+        //   //console.log('merging', key)
+        //   //console.log(compacted)
+        //   merged[key] = mergeSchemas(compacted, compacted[0])
+        // } else {
+        merged[key] = first
+        // }
       } else if (key === 'pattern') {
         merged.allOf = compacted.map(function(regexp) {
           return {
