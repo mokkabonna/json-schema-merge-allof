@@ -33,8 +33,28 @@ function getValues(schemas, key) {
   })
 }
 
+function contains(arr, val) {
+  return arr.indexOf(val) !== -1
+}
+
+function mergeWithArray(base, newItems) {
+  if (Array.isArray(base)) {
+    return base.splice.apply(base, [0, 0].concat(newItems))
+  } else {
+    return newItems
+  }
+}
+
 function isSchema(val) {
   return isPlainObject(val) || val === true || val === false
+}
+
+function isFalse(val) {
+  return val === false
+}
+
+function isTrue(val) {
+  return val === true
 }
 
 function throwIncompatible(values, key) {
@@ -197,7 +217,7 @@ var defaultResolvers = {
       throwIncompatible(compacted, key)
     }
   },
-  oneOf: function(compacted, key, mergeSchemas, totalSchemas, something, reportUnresolved) {
+  oneOf: function(compacted, key, mergeSchemas, totalSchemas, reportUnresolved) {
     var unresolved = compacted.map(function(anyOfGroup) {
       return {
         [key]: anyOfGroup.map(function(schema) {
@@ -276,45 +296,30 @@ function simplifier(rootSchema, options, totalSchemas) {
       ? base
       : {}
 
+    if (schemas.some(isFalse)) {
+      return false
+    }
+
+    if (schemas.every(isTrue)) {
+      return true
+    }
+
+    // there are no false and we don't need the true ones as they accept everything
+    schemas = schemas.filter(isPlainObject)
+
     var incompatibleSchemas = schemas.some(function(schema) {
-      return isPlainObject(schema) && schema.additionalProperties === false
+      return schema.additionalProperties === false
     })
 
     if (incompatibleSchemas && schemas.length > 1 && !options.combineAdditionalProperties) {
       throw new Error('One of your schemas has additionalProperties set to false. You have an invalid schema. Override by using option combineAdditionalProperties:true')
     }
 
-    var hasFalse = schemas.some(function(schema) {
-      return schema === false
-    })
-
-    if (hasFalse) {
-      return false
-    }
-
-    var allTrue = schemas.every(function(schema) {
-      return schema === true
-    })
-
-    if (allTrue) {
-      return true
-    }
-
-    schemas = schemas.filter(function(schema) {
-      return isPlainObject(schema)
-    })
-
     var allKeys = uniq(flattenDeep(schemas.map(function(schema) {
-      return schema
-        ? Object.keys(schema)
-        : []
+      return Object.keys(schema)
     })))
 
-    var hasAllOf = allKeys.some(function(key) {
-      return key === 'allOf'
-    })
-
-    if (hasAllOf) {
+    if (contains(allKeys, 'allOf')) {
       merged.allOf = Array.isArray(merged.allOf)
         ? merged.allOf.concat(schemas)
         : schemas
@@ -323,23 +328,22 @@ function simplifier(rootSchema, options, totalSchemas) {
 
     allKeys.forEach(function(key) {
       var values = getValues(schemas, key)
-
       var compacted = uniqWith(values.filter(notUndefined), isEqual)
 
       // arrayprops like anyOf and oneOf must be merged first, as they contains schemas
-      if (compacted.length === 1 && schemaArrays.indexOf(key) !== -1) {
+      if (compacted.length === 1 && contains(schemaArrays, key)) {
         merged[key] = compacted[0].map(function(schema) {
           return mergeSchemas([schema], schema)
         })
-      // prop groups must always be resolved
-      } else if (compacted.length === 1 && schemaGroupProps.indexOf(key) === -1 && schemaProps.indexOf(key) === -1) {
+        // prop groups must always be resolved
+      } else if (compacted.length === 1 && !contains(schemaGroupProps, key) && !contains(schemaProps, key)) {
         merged[key] = compacted[0]
       } else if (key === 'pattern') {
-        merged.allOf = mergeWithArray(merged.allOf, compacted.map(function(regexp) {
+        addToAllOf(compacted.map(function(regexp) {
           return {pattern: regexp}
         }))
       } else if (key === 'multipleOf') {
-        merged.allOf = mergeWithArray(merged.allOf, compacted.map(function(regexp) {
+        addToAllOf(compacted.map(function(regexp) {
           return {multipleOf: regexp}
         }))
       } else {
@@ -348,26 +352,20 @@ function simplifier(rootSchema, options, totalSchemas) {
           throw new Error('No resolver found for key ' + key)
         }
 
-        merged[key] = resolver(compacted, key, mergeSchemas, totalSchemas, merged[key] || {}, function addToAllOf(unresolvedSchemas) {
-          merged.allOf = mergeWithArray(merged.allOf, unresolvedSchemas)
-        })
+        merged[key] = resolver(compacted, key, mergeSchemas, totalSchemas, addToAllOf)
 
-        // todo check if addToAllOf was called or not, and throw if undefined returnvalue and not called
+        // TODO check if addToAllOf was called or not, and throw if undefined returnvalue and not called
         if (merged[key] === undefined) {
           delete merged[key]
         }
       }
     })
 
-    return merged
-  }
-
-  function mergeWithArray(base, newItems) {
-    if (Array.isArray(base)) {
-      return base.splice.apply(base, [0, 0].concat(newItems))
-    } else {
-      return newItems
+    function addToAllOf(unresolvedSchemas) {
+      merged.allOf = mergeWithArray(merged.allOf, unresolvedSchemas)
     }
+
+    return merged
   }
 
   var allSchemas = flattenDeep(getAllOf(rootSchema))
