@@ -41,7 +41,7 @@ function throwIncompatible(values, key) {
   throw new Error('Values ' + values + ' for key ' + key + ' cant be merged. They are incompatible')
 }
 
-function schemaResolver(schemas, values, compacted, key, mergeSchemas, totalSchemas, parent) {
+function schemaResolver(compacted, key, mergeSchemas, totalSchemas, parent) {
   return mergeSchemas(compacted, parent || {})
 }
 
@@ -95,12 +95,22 @@ var allKeywords = [
 
 // maybe not add dependencies
 var schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
-var schemaProps = ['additionalProperties', 'additionalItems', 'contains', 'propertyNames', 'not', 'items', 'oneOf', 'anyOf']
+var schemaProps = [
+  'additionalProperties',
+  'additionalItems',
+  'contains',
+  'propertyNames',
+  'not',
+  'items'
+]
+var schemaArrays = ['anyOf', 'oneOf']
 var defaultResolvers = {
-  type: function(schemas, values, compacted, key) {
+  type: function(compacted, key) {
     if (compacted.some(Array.isArray)) {
       var normalized = compacted.map(function(val) {
-        return Array.isArray(val) ? val : [val]
+        return Array.isArray(val)
+          ? val
+          : [val]
       })
       var common = intersection.apply(null, normalized)
 
@@ -117,12 +127,14 @@ var defaultResolvers = {
       }
     }
   },
-  properties: function(schemas, values, compacted, key, mergeSchemas, totalSchemas) {
+  properties: function(compacted, key, mergeSchemas, totalSchemas) {
     var allProperties = uniq(flattenDeep(compacted.map(function(properties) {
       return Object.keys(properties)
     })))
 
-    if (!compacted.length) return
+    if (!compacted.length) {
+      return
+    }
 
     return allProperties.reduce(function(all, propKey) {
       var propSchemas = getValues(compacted, propKey)
@@ -152,12 +164,12 @@ var defaultResolvers = {
       return all
     }, compacted[0] || {})
   },
-  items: function(schemas, values, compacted, key, mergeSchemas, totalSchemas) {
+  items: function(compacted, key, mergeSchemas, totalSchemas) {
     if (compacted.every(isSchema)) {
       return schemaResolver.apply(null, arguments)
     } else if (compacted.every(Array.isArray)) {
-      //TODO get max items
-      var max = compacted.reduce(function (sum, b) {
+      // TODO get max items
+      var max = compacted.reduce(function(sum, b) {
         return Math.max(sum, b.length)
       }, 0)
 
@@ -165,7 +177,6 @@ var defaultResolvers = {
         var all = []
         for (var i = 0; i < max; i++) {
           all.push(arrayOfArrays[i][pos])
-
         }
 
         return flatten(all)
@@ -174,7 +185,7 @@ var defaultResolvers = {
       return compacted.reduce(function(all, items, pos) {
         var schemasAtCurrentPos = uniqWith(getAllSchemas(compacted, pos, max).filter(notUndefined), isEqual)
 
-        if(schemasAtCurrentPos.length !== 1){
+        if (schemasAtCurrentPos.length !== 1) {
           throwIncompatible(schemasAtCurrentPos, key)
         }
         all[pos] = mergeSchemas(schemasAtCurrentPos, schemasAtCurrentPos[0])
@@ -185,112 +196,47 @@ var defaultResolvers = {
       throwIncompatible(compacted, key)
     }
   },
-  oneOf: function(schemas, values, compacted, key, mergeSchemas, totalSchemas) {
-    //TODO check intersection of schemas when multiple
-    if (compacted.length === 1) {
-      return compacted[0].map(function (schema) {
-        return mergeSchemas([schema], schema)
-      })
-    } else {
-      throwIncompatible(compacted, key)
-    }
+  oneOf: function(compacted, key, mergeSchemas, totalSchemas, something, reportUnresolved) {
+    // TODO check intersection of schemas when multiple
+    // if (compacted.length === 1) {
+    //   return compacted[0].map(function(schema) {
+    //     return mergeSchemas([schema], schema)
+    //   })
+    // } else {
+    //   throwIncompatible(compacted, key)
+    // }
+
+    var unresolved = compacted.map(function(anyOfGroup) {
+      return {
+        [key]: anyOfGroup.map(function(schema) {
+          return mergeSchemas([schema], schema)
+        })
+      }
+    })
+    console.log(unresolved)
+    reportUnresolved(unresolved)
   },
-  not: function(schemas, values, compacted) {
-    return {
-      allOf: compacted
-    }
+  not: function(compacted) {
+    return {allOf: compacted}
   },
-  first: function(schemas, values, compacted) {
+  first: function(compacted) {
     return compacted[0]
   },
-  required: function(schemas, values, compacted, key) {
+  required: function(compacted, key) {
     return stringArray(compacted)
   },
-  minLength: function(schemas, values, compacted) {
+  minLength: function(compacted) {
     return Math.max.apply(Math, compacted)
   },
-  maxLength: function(schemas, values, compacted) {
+  maxLength: function(compacted) {
     return Math.min.apply(Math, compacted)
   },
-  uniqueItems: function(schemas, values, compacted, key) {
+  uniqueItems: function(compacted, key) {
     return compacted.some(function(val) {
       return val === true
     })
   },
-  const: function(schemas, values, compacted, key) {
-    throwIncompatible(compacted, key)
-  },
-  multipleOf: function(schemas, values, compacted, key) {
-    var factors = 0
-    compacted.forEach(function(num) {
-      if (Number.isInteger(num)) return
-      // 100 precition
-      for (var i = 1; i < 100; i += 1) {
-        num = num * 10
-        factors = Math.max(i, factors)
-        if (Number.isInteger(num)) {
-          return num
-        }
-      }
-    })
-
-    var integers = compacted.map(function(num) {
-      if (!Number.isInteger(num)) {
-        var divider = 1
-        for (var i = 0; i < factors; i++) {
-          divider = divider * 10
-        }
-        return num * divider
-      } else {
-        return num
-      }
-    })
-
-    var divider = 1
-    for (var i = 0; i < factors; i++) {
-      divider = divider * 10
-    }
-
-    var max = integers.reduce(function(sum, next) {
-      return sum * next
-    })
-
-    var copy = integers.slice(0).sort()
-    var currentTry
-    while (currentTry = copy.pop()) {
-      var test = max / currentTry
-      var result = integers.every(function(num) {
-        return Number.isInteger(parseFloat((test / num).toFixed(5)))
-      })
-
-
-      if (result) return test / divider
-    }
-    return max / divider
-
-    // console.log(integers)
-    // console.log(factors)
-    // console.log(max)
-    //
-    // function getIntegersForNum(numbers) {
-    //   for (var i = 1; i < 10000; i += 0.1) {
-    //     if (i === 0) continue
-    //     var result = numbers.every(function(num) {
-    //       return Number.isInteger(parseFloat((i / num).toFixed(5)))
-    //     })
-    //
-    //     if (result) {
-    //       return parseFloat(i.toFixed(4))
-    //     }
-    //   }
-    // }
-    //
-    // var result = getIntegersForNum(compacted)
-    // if (!result) throw new Error('Could ot find a common number for multipleOf values: ' + compacted.join(', '))
-    //
-    // return result
-  },
-  enum: function(schemas, values, compacted, key) {
+  enum: function(compacted, key) {
     var enums = intersectionWith.apply(null, compacted.concat(isEqual))
     if (enums.length) {
       return sortBy(enums)
@@ -335,7 +281,9 @@ function simplifier(rootSchema, options, totalSchemas) {
   })
 
   function mergeSchemas(schemas, base, isGroup) {
-    var merged = isPlainObject(base) ? base : {}
+    var merged = isPlainObject(base)
+      ? base
+      : {}
 
     var incompatibleSchemas = schemas.some(function(schema) {
       return isPlainObject(schema) && schema.additionalProperties === false
@@ -366,7 +314,9 @@ function simplifier(rootSchema, options, totalSchemas) {
     })
 
     var allKeys = uniq(flattenDeep(schemas.map(function(schema) {
-      return schema ? Object.keys(schema) : []
+      return schema
+        ? Object.keys(schema)
+        : []
     })))
 
     var hasAllOf = allKeys.some(function(key) {
@@ -374,7 +324,9 @@ function simplifier(rootSchema, options, totalSchemas) {
     })
 
     if (hasAllOf) {
-      merged.allOf = Array.isArray(merged.allOf) ? merged.allOf.concat(schemas) : schemas
+      merged.allOf = Array.isArray(merged.allOf)
+        ? merged.allOf.concat(schemas)
+        : schemas
       return simplifier(merged, options, totalSchemas)
     }
 
@@ -385,36 +337,41 @@ function simplifier(rootSchema, options, totalSchemas) {
 
       // prop groups must always be resolved
       if (compacted.length === 1 && schemaGroupProps.indexOf(key) === -1 && schemaProps.indexOf(key) === -1) {
-
-        var first = compacted[0]
-        //if(key === 'items') console.log(first)
-        // if (schemaProps.indexOf(key) !== -1) {
-        //   //console.log('merging', key)
-        //   //console.log(compacted)
-        //   merged[key] = mergeSchemas(compacted, compacted[0])
-        // } else {
-        merged[key] = first
-        // }
+        merged[key] = compacted[0]
       } else if (key === 'pattern') {
-        merged.allOf = compacted.map(function(regexp) {
-          return {
-            pattern: regexp
-          }
-        })
-        // } else if (key === 'multipleOf') {
-        //   merged.allOf = compacted.map(function(regexp) {
-        //     return {
-        //       multipleOf: regexp
-        //     }
-        //   })
+        merged.allOf = mergeWithArray(merged.allOf, compacted.map(function(regexp) {
+          return {pattern: regexp}
+        }))
+      } else if (key === 'multipleOf') {
+        merged.allOf = mergeWithArray(merged.allOf, compacted.map(function(regexp) {
+          return {multipleOf: regexp}
+        }))
       } else {
         var resolver = options.resolvers[key]
-        if (!resolver) throw new Error('No resolver found for key ' + key)
-        merged[key] = resolver(schemas, values, compacted, key, mergeSchemas, totalSchemas, merged[key] || {})
+        if (!resolver) {
+          throw new Error('No resolver found for key ' + key)
+        }
+
+        merged[key] = resolver(compacted, key, mergeSchemas, totalSchemas, merged[key] || {}, function addToAllOf(unresolvedSchemas) {
+          merged.allOf = mergeWithArray(merged.allOf, unresolvedSchemas)
+        })
+
+        // todo check if addToAllOf was called or not, and throw if undefined returnvalue and not called
+        if (merged[key] === undefined) {
+          delete merged[key]
+        }
       }
     })
 
     return merged
+  }
+
+  function mergeWithArray(base, newItems) {
+    if (Array.isArray(base)) {
+      return base.splice.apply(base, [0, 0].concat(newItems))
+    } else {
+      return newItems
+    }
   }
 
   var allSchemas = flattenDeep(getAllOf(rootSchema))
