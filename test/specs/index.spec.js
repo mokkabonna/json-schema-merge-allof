@@ -1,8 +1,8 @@
 var chai = require('chai')
-var _ = require('lodash')
+// var _ = require('lodash')
 var simplifier = require('../../src')
 var $RefParser = require('json-schema-ref-parser')
-var stringify = require('json-stringify-safe')
+// var stringify = require('json-stringify-safe')
 
 var expect = chai.expect
 
@@ -367,6 +367,67 @@ describe('module', function() {
       })
     })
 
+    it.skip('merges anyOf by finding valid combinations', function() {
+      var result = simplifier({
+        allOf: [
+          {
+            anyOf: [
+              {
+                required: ['123']
+              }, {
+                required: ['456']
+              }
+            ]
+          }, {
+            anyOf: [
+              {
+                required: ['123']
+              }, {
+                required: ['456']
+              }
+            ]
+          }
+        ]
+      })
+
+      expect(result).to.eql({
+        anyOf: [
+          {
+            required: ['123']
+          }, {
+            required: ['456']
+          }
+        ]
+      })
+    })
+
+    it.skip('merges anyOf into main schema if left with only one combination', function() {
+      var result = simplifier({
+        required: ['abc'],
+        allOf: [
+          {
+            anyOf: [
+              {
+                required: ['123']
+              }, {
+                required: ['456']
+              }
+            ]
+          }, {
+            anyOf: [
+              {
+                required: ['123']
+              }
+            ]
+          }
+        ]
+      })
+
+      expect(result).to.eql({
+        required: ['abc', '123']
+      })
+    })
+
     it('merges nested allOf if inside singular anyOf', function() {
       var result = simplifier({
         allOf: [
@@ -374,9 +435,11 @@ describe('module', function() {
             anyOf: [
               {
                 required: ['123'],
-                allOf: [{
-                  required: ['768']
-                }]
+                allOf: [
+                  {
+                    required: ['768']
+                  }
+                ]
               }
             ]
           }, {
@@ -477,55 +540,62 @@ describe('module', function() {
         }
       ]})
 
-      expect(result).to.eql({allOf: [
-        {
-          oneOf: [
-            {
-              required: ['123']
-            }, {
-              properties: {
-                name: {
-                  type: 'string'
+      expect(result).to.eql({
+        allOf: [
+          {
+            oneOf: [
+              {
+                required: ['123']
+              }, {
+                properties: {
+                  name: {
+                    type: 'string'
+                  }
                 }
+              }, {
+                required: ['abc']
               }
-            }, {
-              required: ['abc']
-            }
-          ]
-        }, {
-          oneOf: [
-            {
-              required: ['123']
-            }, {
-              required: ['abc']
-            }
-          ]
-        }
-      ]})
+            ]
+          }, {
+            oneOf: [
+              {
+                required: ['123']
+              }, {
+                required: ['abc']
+              }
+            ]
+          }
+        ]
+      })
     })
 
     it('merges nested allOf if inside singular oneOf', function() {
       var result = simplifier({
         allOf: [
           {
-            type: ['array', 'string', 'number'],
+            type: [
+              'array', 'string', 'number'
+            ],
             oneOf: [
               {
                 required: ['123'],
-                allOf: [{
-                  required: ['768']
-                }]
+                allOf: [
+                  {
+                    required: ['768']
+                  }
+                ]
               }
             ]
-          },
-          {
+          }, {
             type: ['array', 'string']
           }
         ]
       })
 
       expect(result).to.eql({
-        type: ['array', 'string'],
+        type: [
+          'array', 'string'
+        ],
         oneOf: [
           {
             required: ['123', '768']
@@ -538,17 +608,23 @@ describe('module', function() {
       var result = simplifier({
         allOf: [
           {
-            type: ['array', 'string', 'number'],
+            type: [
+              'array', 'string', 'number'
+            ],
             oneOf: [
               {
                 required: ['123'],
-                allOf: [{
-                  required: ['768']
-                }]
+                allOf: [
+                  {
+                    required: ['768']
+                  }
+                ]
               }
             ]
           }, {
-            type: ['array', 'string'],
+            type: [
+              'array', 'string'
+            ],
             oneOf: [
               {
                 required: ['123']
@@ -561,7 +637,9 @@ describe('module', function() {
       })
 
       expect(result).to.eql({
-        type: ['array', 'string'],
+        type: [
+          'array', 'string'
+        ],
         allOf: [
           {
             oneOf: [
