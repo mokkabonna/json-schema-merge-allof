@@ -75,7 +75,13 @@ function isTrue(val) {
 }
 
 function throwIncompatible(values, key) {
-  throw new Error('Values ' + values + ' for key ' + key + ' cant be merged. They are incompatible')
+  var asJSON
+  try {
+    asJSON = JSON.stringify(values, null, 2)
+  } catch (variable) {
+    asJSON = values.join(', ')
+  }
+  throw new Error('Could not resolve values for keyword:"' + key + '". They are probably incompatible. Values: ' + asJSON)
 }
 
 function schemaResolver(compacted, key, mergeSchemas, totalSchemas, parent) {
@@ -322,14 +328,14 @@ function simplifier(rootSchema, options, totalSchemas) {
           throw new Error('No resolver found for key ' + key)
         }
 
-        var addToAllOfWasCalled = false
+        var calledWithArray = false
         merged[key] = resolver(compacted, key, mergeSchemas, totalSchemas, function(unresolvedSchemas) {
-          addToAllOfWasCalled = true
+          calledWithArray = Array.isArray(unresolvedSchemas)
           return addToAllOf(unresolvedSchemas)
         })
 
         // TODO check if addToAllOf was called or not, and throw if undefined returnvalue and not called
-        if (merged[key] === undefined && !addToAllOfWasCalled) {
+        if (merged[key] === undefined && !calledWithArray) {
           throwIncompatible(compacted, key)
         } else if (merged[key] === undefined) {
           delete merged[key]
