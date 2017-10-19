@@ -11,16 +11,16 @@ describe('module', function() {
     var result = simplifier({
       allOf: [
         {
-          type: 'text',
+          type: 'string',
           minLength: 1
         }, {
-          type: 'text',
+          type: 'string',
           maxLength: 5
         }
       ]
     })
 
-    expect(result).to.eql({type: 'text', minLength: 1, maxLength: 5})
+    expect(result).to.eql({type: 'string', minLength: 1, maxLength: 5})
   })
 
   it('combines without allOf', function() {
@@ -328,25 +328,7 @@ describe('module', function() {
     })
 
     it('merges anyOf', function() {
-      var result = simplifier({allOf: [
-        {}, {
-          anyOf: [
-            {
-              required: ['123']
-            }
-          ]
-        }, {
-          anyOf: [
-            {
-              required: ['123']
-            }, {
-              required: ['456']
-            }
-          ]
-        }
-      ]})
-
-      expect(result).to.eql({
+      var result = simplifier({
         allOf: [
           {
             anyOf: [
@@ -363,27 +345,36 @@ describe('module', function() {
               }
             ]
           }
+        ]})
+
+      expect(result).to.eql({
+        anyOf: [
+          {
+            required: ['123']
+          }, {
+            required: ['123', '456']
+          }
         ]
       })
     })
 
-    it.skip('merges anyOf by finding valid combinations', function() {
+    it('merges anyOf by finding valid combinations', function() {
       var result = simplifier({
         allOf: [
           {
             anyOf: [
               {
-                required: ['123']
+                type: ['null', 'string', 'array']
               }, {
-                required: ['456']
+                type: ['null', 'string', 'object']
               }
             ]
           }, {
             anyOf: [
               {
-                required: ['123']
+                type: ['null', 'string']
               }, {
-                required: ['456']
+                type: ['integer', 'object', 'null']
               }
             ]
           }
@@ -393,9 +384,50 @@ describe('module', function() {
       expect(result).to.eql({
         anyOf: [
           {
-            required: ['123']
+            type: ['null', 'string']
           }, {
-            required: ['456']
+            type: 'null'
+          }, {
+            type: ['object', 'null']
+          }
+        ]
+      })
+    })
+
+    it.skip('extracts common logic', function() {
+      var result = simplifier({
+        allOf: [
+          {
+            anyOf: [
+              {
+                type: ['null', 'string', 'array'],
+                minLength: 5
+              }, {
+                type: ['null', 'string', 'object'],
+                minLength: 5
+              }
+            ]
+          }, {
+            anyOf: [
+              {
+                type: ['null', 'string'],
+                minLength: 5
+              }, {
+                type: ['integer', 'object', 'null']
+              }
+            ]
+          }
+        ]
+      })
+
+      // TODO I think this is correct
+      // TODO implement functionality
+      expect(result).to.eql({
+        type: 'null',
+        minLength: 5,
+        anyOf: [
+          {
+            type: 'string'
           }
         ]
       })
@@ -455,114 +487,113 @@ describe('module', function() {
       })
 
       expect(result).to.eql({
+        anyOf: [
+          {
+            required: ['123', '768']
+          },
+          {
+            required: ['123', '456']
+          }
+        ]
+      })
+    })
+
+    it('throws if no intersection at all', function() {
+      expect(function() {
+        simplifier({
+          allOf: [
+            {
+              anyOf: [
+                {
+                  type: ['object', 'string', 'null']
+                }
+              ]
+            }, {
+              anyOf: [
+                {
+                  type: ['array', 'integer']
+                }
+              ]
+            }
+          ]
+        })
+      }).to.throw(/incompatible/)
+
+      expect(function() {
+        simplifier({
+          allOf: [
+            {
+              anyOf: [
+                {
+                  type: ['object', 'string', 'null']
+                }
+              ]
+            }, {
+              anyOf: [
+                {
+                  type: ['array', 'integer']
+                }
+              ]
+            }
+          ]
+        })
+      }).to.throw(/incompatible/)
+    })
+
+    it('merges more complex oneOf', function() {
+      var result = simplifier({
         allOf: [
           {
-            anyOf: [
+            oneOf: [
               {
-                required: ['123', '768']
-              }
-            ]
-          }, {
-            anyOf: [
-              {
+                type: ['array', 'string', 'object'],
                 required: ['123']
               }, {
-                required: ['456']
-              }
-            ]
-          }
-        ]
-      })
-    })
-
-    it('throws if no intersection', function() {
-      expect(simplifier({
-        allOf: [
-          {
-            type: 'array',
-            anyOf: [
-              {
-                required: ['123']
+                required: ['abc']
               }
             ]
           }, {
-            anyOf: [
+            oneOf: [
               {
-                required: ['456']
+                type: ['string']
+              }, {
+                type: ['object', 'array'],
+                required: ['abc']
               }
             ]
           }
-        ]
-      })).to.eql({
-        type: 'array',
-        allOf: [
-          {
-            anyOf: [
-              {
-                required: ['123']
-              }
-            ]
-          }, {
-            anyOf: [
-              {
-                required: ['456']
-              }
-            ]
-          }
-        ]
-      })
-    })
-
-    it('leaves oneOf as is if multiple', function() {
-      var result = simplifier({allOf: [
-        {}, {
-          oneOf: [
-            {
-              required: ['123']
-            }, {
-              properties: {
-                name: {
-                  type: 'string'
-                }
-              }
-            }, {
-              required: ['abc']
-            }
-          ]
-        }, {
-          oneOf: [
-            {
-              required: ['123']
-            }, {
-              required: ['abc']
-            }
-          ]
-        }
-      ]})
+        ]})
 
       expect(result).to.eql({
-        allOf: [
+        'oneOf': [
           {
-            oneOf: [
-              {
-                required: ['123']
-              }, {
-                properties: {
-                  name: {
-                    type: 'string'
-                  }
-                }
-              }, {
-                required: ['abc']
-              }
+            'type': 'string',
+            'required': [
+              '123'
             ]
-          }, {
-            oneOf: [
-              {
-                required: ['123']
-              }, {
-                required: ['abc']
-              }
+          },
+          {
+            'type': ['object', 'array'],
+            'required': [
+              '123',
+              'abc'
+            ]
+          },
+          {
+            'type': [
+              'string'
+            ],
+            'required': [
+              'abc'
+            ]
+          },
+          {
+            'type': [
+              'object',
+              'array'
+            ],
+            'required': [
+              'abc'
             ]
           }
         ]
@@ -613,10 +644,10 @@ describe('module', function() {
             ],
             oneOf: [
               {
-                required: ['123'],
+                type: ['array', 'object'],
                 allOf: [
                   {
-                    required: ['768']
+                    type: 'object'
                   }
                 ]
               }
@@ -627,9 +658,9 @@ describe('module', function() {
             ],
             oneOf: [
               {
-                required: ['123']
+                type: 'string'
               }, {
-                required: ['456']
+                type: 'object'
               }
             ]
           }
@@ -640,21 +671,9 @@ describe('module', function() {
         type: [
           'array', 'string'
         ],
-        allOf: [
+        oneOf: [
           {
-            oneOf: [
-              {
-                required: ['123', '768']
-              }
-            ]
-          }, {
-            oneOf: [
-              {
-                required: ['123']
-              }, {
-                required: ['456']
-              }
-            ]
+            type: 'object'
           }
         ]
       })
@@ -926,6 +945,41 @@ describe('module', function() {
       })
 
       expect(result2).to.eql({pattern: 'abba'})
+    })
+
+    it('merges multipleOf using allOf or direct assignment', function() {
+      var result = simplifier({allOf: [
+        {
+          title: 'foo',
+          type: ['number', 'integer'],
+          multipleOf: 2
+        }, {
+          type: 'integer',
+          multipleOf: 3
+        }
+      ]})
+
+      expect(result).to.eql({
+        type: 'integer',
+        title: 'foo',
+        allOf: [
+          {
+            multipleOf: 2
+          }, {
+            multipleOf: 3
+          }
+        ]
+      })
+
+      var result2 = simplifier({
+        allOf: [
+          {
+            multipleOf: 1
+          }
+        ]
+      })
+
+      expect(result2).to.eql({multipleOf: 1})
     })
 
     it.skip('merges multipleOf by finding common lowest number', function() {
