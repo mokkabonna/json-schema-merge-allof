@@ -3,6 +3,7 @@
 ## Features
 
 - **Real** and **safe** merging of schemas combined with **allOf**
+- Remove redundant keywords found in anyOf/oneOf
 - Results in a more readable root schema
 - Removes almost all logical impossibilities
 - Throws if no logical intersection is found (your schema would not validate anything)
@@ -12,7 +13,6 @@
 - Compare 2 schemas logically
 - Supports all json schema keywords
 - Supports schemas with circular references
-- Remove redundant keywords found in anyOf/oneOf
 
 
 ## How
