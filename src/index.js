@@ -9,6 +9,7 @@ var Ajv = require('ajv')
 // var difference = require('lodash/difference')
 // var omit = require('lodash/omit')
 var intersection = require('lodash/intersection')
+// var union = require('lodash/union')
 var intersectionWith = require('lodash/intersectionWith')
 var isPlainObject = require('lodash/isPlainObject')
 var sortBy = require('lodash/sortBy')
@@ -190,7 +191,7 @@ var defaultResolvers = {
       }, compacted[0])
     }
   },
-  oneOf: function(compacted, key, mergeSchemas, totalSchemas, reportExtracted) {
+  oneOf: function(compacted, key, mergeSchemas) {
     var combinations = getAnyOfCombinations(cloneDeep(compacted))
 
     var result = combinations.map(function(combination) {
@@ -233,6 +234,9 @@ var defaultResolvers = {
       return val === true
     })
   },
+  examples: function(compacted) {
+    return uniqWith(flatten(compacted), isEqual)
+  },
   enum: function(compacted, key) {
     var enums = intersectionWith.apply(null, compacted.concat(isEqual))
     if (enums.length) {
@@ -247,7 +251,6 @@ defaultResolvers.$ref = defaultResolvers.first // TODO correct? probably throw
 defaultResolvers.title = defaultResolvers.first
 defaultResolvers.description = defaultResolvers.first
 defaultResolvers.default = defaultResolvers.first
-defaultResolvers.format = defaultResolvers.first // TODO correct?, probably throw
 defaultResolvers.multipleOf = defaultResolvers.pattern
 defaultResolvers.minimum = defaultResolvers.minLength
 defaultResolvers.exclusiveMinimum = defaultResolvers.minLength

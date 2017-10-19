@@ -947,6 +947,8 @@ describe('module', function() {
       expect(result2).to.eql({pattern: 'abba'})
     })
 
+    it('extracts pattern from anyOf and oneOf using | operator in regexp')
+
     it('merges multipleOf using allOf or direct assignment', function() {
       var result = simplifier({allOf: [
         {
