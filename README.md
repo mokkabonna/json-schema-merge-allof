@@ -80,7 +80,7 @@ Regular expressions does not have an AND operator, only OR.
 
 ### multipleOf
 
-multipleOf is solved in the same way as pattern. I have not yet discovered an way to detect the absolute minimum common new value multipleOf would consist of that are compatible with all the original ones.
+multipleOf is solved in the same way as pattern. I have not yet discovered a way to detect the absolute minimum common new value multipleOf would consist of that are compatible with all the original ones.
 
 ## Options
 **resolvers** Object
