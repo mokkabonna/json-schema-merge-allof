@@ -492,7 +492,7 @@ describe('module', function() {
             required: ['123', '768']
           },
           {
-            required: ['123', '456']
+            required: ['123', '456', '768']
           }
         ]
       })
@@ -850,30 +850,23 @@ describe('module', function() {
 
       expect(result).to.eql({
         contains: {
-          allOf: [
-            {
-              properties: {
-                name: {
-                  type: 'string',
-                  pattern: 'bar'
-                }
-              }
-            }, {
-              properties: {
-                name: {
-                  type: 'string',
-                  pattern: 'foo'
-                }
-              }
+          properties: {
+            name: {
+              type: 'string',
+              allOf: [{
+                pattern: 'bar'
+              }, {
+                pattern: 'foo'
+              }]
             }
-          ]
+          }
         }
       })
     })
 
-    it('merges additionalItems using allOf', function() {
+    it('merges additionalItems', function() {
       var result = simplifier({allOf: [
-        {}, {
+        {
           additionalItems: {
             properties: {
               name: {
@@ -896,23 +889,16 @@ describe('module', function() {
 
       expect(result).to.eql({
         additionalItems: {
-          allOf: [
-            {
-              properties: {
-                name: {
-                  type: 'string',
-                  pattern: 'bar'
-                }
-              }
-            }, {
-              properties: {
-                name: {
-                  type: 'string',
-                  pattern: 'foo'
-                }
-              }
+          properties: {
+            name: {
+              type: 'string',
+              allOf: [{
+                pattern: 'bar'
+              }, {
+                pattern: 'foo'
+              }]
             }
-          ]
+          }
         }
       })
     })
