@@ -46,18 +46,131 @@ describe('properties', function() {
   })
 
   describe('additionalProperties', function() {
-    it.skip('throws if additionalProperties is false', function() {
-      expect(function() {
-        simplifier({
-          allOf: [
-            {
-              additionalProperties: true
-            }, {
-              additionalProperties: false
-            }
-          ]
-        })
-      }).to.throw(/additionalProperties/)
+    it('allows no extra properties if additionalProperties is false', function() {
+      var result = simplifier({
+        allOf: [
+          {
+            additionalProperties: true
+          }, {
+            additionalProperties: false
+          }
+        ]
+      })
+
+      expect(result).to.eql({additionalProperties: false})
+    })
+
+    it('allows only intersecting properties', function() {
+      var result = simplifier({
+        allOf: [
+          {
+            properties: {
+              foo: true
+            },
+            additionalProperties: true
+          }, {
+            properties: {
+              bar: true
+            },
+            additionalProperties: false
+          }
+        ]
+      })
+
+      expect(result).to.eql({
+        properties: {
+          bar: true
+        },
+        additionalProperties: false
+      })
+    })
+
+    it('allows intersecting patternproperties', function() {
+      var result = simplifier({
+        allOf: [
+          {
+            properties: {
+              foo: true,
+              foo123: true
+            },
+            additionalProperties: true
+          }, {
+            properties: {
+              bar: true
+            },
+            patternProperties: {
+              '.+\\d+$': true
+            },
+            additionalProperties: false
+          }
+        ]
+      })
+
+      expect(result).to.eql({
+        properties: {
+          bar: true,
+          foo123: true
+        },
+        patternProperties: {
+          '.+\\d+$': true
+        },
+        additionalProperties: false
+      })
+    })
+
+    it('disallows all except patternProperties if both false', function() {
+      var result = simplifier({
+        allOf: [
+          {
+            properties: {
+              foo: true,
+              foo123: true
+            },
+            additionalProperties: false
+          }, {
+            properties: {
+              bar: true
+            },
+            patternProperties: {
+              '.+\\d+$': true
+            },
+            additionalProperties: false
+          }
+        ]
+      })
+
+      expect(result).to.eql({
+        properties: {
+          foo123: true
+        },
+        patternProperties: {
+          '.+\\d+$': true
+        },
+        additionalProperties: false
+      })
+    })
+
+    it('disallows all if no patternProperties and if both false', function() {
+      var result = simplifier({
+        allOf: [
+          {
+            properties: {
+              foo: true,
+              foo123: true
+            },
+            additionalProperties: false
+          }, {
+            properties: {
+              bar: true
+            },
+            additionalProperties: false
+          }
+        ]
+      })
+
+      expect(result).to.eql({
+        additionalProperties: false
+      })
     })
 
     it('allows otherwise incompatible properties if option ignoreAdditionalProperties is true', function() {
@@ -95,9 +208,7 @@ describe('properties', function() {
         ]
       })
 
-      expect(result2).to.eql({
-        additionalProperties: true
-      })
+      expect(result2).to.eql({additionalProperties: true})
     })
 
     it('applies additionalProperties to other schemas properties if they have any', function() {
