@@ -21,7 +21,7 @@ Since allOf require ALL schemas provided (including the parent schema) to apply,
 
 ```js
 {
-  type: '[object', 'null'],
+  type: ['object', 'null'],
   additionalProperties: {
     type: 'string',
     minLength: 5
@@ -78,9 +78,9 @@ If a schema have the pattern keyword and we have a conflict, then we need to lea
 
 Regular expressions does not have an AND operator, only OR.
 
-### multipleOf
+### not
 
-multipleOf is solved in the same way as pattern. I have not yet discovered a way to detect the absolute minimum common new value multipleOf would consist of that are compatible with all the original ones.
+When multiple conflicting **not** values are found, we also use the approach that pattern use, but instead of allOf we use anyOf. When extraction of common rules from anyOf is in place this can be further simplified.
 
 ## Options
 **resolvers** Object

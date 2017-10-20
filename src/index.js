@@ -6,17 +6,11 @@ var defaults = require('lodash/defaults')
 var isEqual = require('lodash/isEqual')
 var cloneDeep = require('lodash/cloneDeep')
 var Ajv = require('ajv')
-// var difference = require('lodash/difference')
-// var omit = require('lodash/omit')
+var computeLcm = require('compute-lcm')
 var intersection = require('lodash/intersection')
-// var union = require('lodash/union')
 var intersectionWith = require('lodash/intersectionWith')
 var isPlainObject = require('lodash/isPlainObject')
 var sortBy = require('lodash/sortBy')
-// var mergeWith = require('lodash/mergeWith')
-// var pull = require('lodash/pull')
-// var isFunction = require('lodash/isFunction')
-// var values = require('lodash/values')
 
 function getAllOf(schema) {
   if (Array.isArray(schema.allOf)) {
@@ -210,7 +204,7 @@ var defaultResolvers = {
     }
   },
   not: function(compacted) {
-    return {allOf: compacted}
+    return {anyOf: compacted}
   },
   first: function(compacted) {
     return compacted[0]
@@ -228,6 +222,15 @@ var defaultResolvers = {
     reportUnresolved(compacted.map(function(regexp) {
       return {[key]: regexp}
     }))
+  },
+  multipleOf: function(compacted) {
+    var integers = compacted.slice(0)
+    var factor = 1
+    while (integers.some(n => !Number.isInteger(n))) {
+      integers = integers.map(n => n * 10)
+      factor = factor * 10
+    }
+    return computeLcm(integers) / factor
   },
   uniqueItems: function(compacted) {
     return compacted.some(function(val) {
@@ -251,7 +254,6 @@ defaultResolvers.$ref = defaultResolvers.first // TODO correct? probably throw
 defaultResolvers.title = defaultResolvers.first
 defaultResolvers.description = defaultResolvers.first
 defaultResolvers.default = defaultResolvers.first
-defaultResolvers.multipleOf = defaultResolvers.pattern
 defaultResolvers.minimum = defaultResolvers.minLength
 defaultResolvers.exclusiveMinimum = defaultResolvers.minLength
 defaultResolvers.minItems = defaultResolvers.minLength
@@ -364,7 +366,7 @@ function simplifier(rootSchema, options, totalSchemas) {
       throw new Error('Schema returned by resolver isn\'t valid.')
     }
   } catch (e) {
-    if (!/stack/i.test(e.message)) throw e
+    if (!/stack/i.test(e.message)) { throw e }
   }
 
   return merged

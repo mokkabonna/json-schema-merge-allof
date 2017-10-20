@@ -345,7 +345,8 @@ describe('module', function() {
               }
             ]
           }
-        ]})
+        ]
+      })
 
       expect(result).to.eql({
         anyOf: [
@@ -400,17 +401,23 @@ describe('module', function() {
           {
             anyOf: [
               {
-                type: ['null', 'string', 'array'],
+                type: [
+                  'null', 'string', 'array'
+                ],
                 minLength: 5
               }, {
-                type: ['null', 'string', 'object'],
+                type: [
+                  'null', 'string', 'object'
+                ],
                 minLength: 5
               }
             ]
           }, {
             anyOf: [
               {
-                type: ['null', 'string'],
+                type: [
+                  'null', 'string'
+                ],
                 minLength: 5
               }, {
                 type: ['integer', 'object', 'null']
@@ -490,8 +497,7 @@ describe('module', function() {
         anyOf: [
           {
             required: ['123', '768']
-          },
-          {
+          }, {
             required: ['123', '456', '768']
           }
         ]
@@ -546,7 +552,9 @@ describe('module', function() {
           {
             oneOf: [
               {
-                type: ['array', 'string', 'object'],
+                type: [
+                  'array', 'string', 'object'
+                ],
                 required: ['123']
               }, {
                 required: ['abc']
@@ -557,44 +565,34 @@ describe('module', function() {
               {
                 type: ['string']
               }, {
-                type: ['object', 'array'],
+                type: [
+                  'object', 'array'
+                ],
                 required: ['abc']
               }
             ]
           }
-        ]})
+        ]
+      })
 
       expect(result).to.eql({
         'oneOf': [
           {
             'type': 'string',
-            'required': [
-              '123'
-            ]
-          },
-          {
-            'type': ['object', 'array'],
-            'required': [
-              '123',
-              'abc'
-            ]
-          },
-          {
+            'required': ['123']
+          }, {
             'type': [
-              'string'
+              'object', 'array'
             ],
-            'required': [
-              'abc'
-            ]
-          },
-          {
+            'required': ['123', 'abc']
+          }, {
+            'type': ['string'],
+            'required': ['abc']
+          }, {
             'type': [
-              'object',
-              'array'
+              'object', 'array'
             ],
-            'required': [
-              'abc'
-            ]
+            'required': ['abc']
           }
         ]
       })
@@ -644,7 +642,9 @@ describe('module', function() {
             ],
             oneOf: [
               {
-                type: ['array', 'object'],
+                type: [
+                  'array', 'object'
+                ],
                 allOf: [
                   {
                     type: 'object'
@@ -780,43 +780,42 @@ describe('module', function() {
     })
 
     it('merges not using allOf', function() {
-      var result = simplifier({allOf: [
-        {}, {
-          not: {
-            properties: {
-              name: {
-                type: 'string',
-                pattern: 'bar'
+      var result = simplifier({
+        allOf: [
+          {
+            not: {
+              properties: {
+                name: {
+                  type: 'string'
+                }
+              }
+            }
+          }, {
+            not: {
+              properties: {
+                name: {
+                  type: ['string', 'null']
+                }
               }
             }
           }
-        }, {
-          not: {
-            properties: {
-              name: {
-                type: 'string',
-                pattern: 'foo'
-              }
-            }
-          }
-        }
-      ]})
+        ]
+      })
 
       expect(result).to.eql({
         not: {
-          allOf: [
+          anyOf: [
             {
               properties: {
                 name: {
-                  type: 'string',
-                  pattern: 'bar'
+                  type: 'string'
                 }
               }
-            }, {
+            },
+            {
               properties: {
                 name: {
-                  type: 'string',
-                  pattern: 'foo'
+                  type: ['string', 'null']
                 }
               }
             }
@@ -853,11 +852,13 @@ describe('module', function() {
           properties: {
             name: {
               type: 'string',
-              allOf: [{
-                pattern: 'bar'
-              }, {
-                pattern: 'foo'
-              }]
+              allOf: [
+                {
+                  pattern: 'bar'
+                }, {
+                  pattern: 'foo'
+                }
+              ]
             }
           }
         }
@@ -865,38 +866,42 @@ describe('module', function() {
     })
 
     it('merges additionalItems', function() {
-      var result = simplifier({allOf: [
-        {
-          additionalItems: {
-            properties: {
-              name: {
-                type: 'string',
-                pattern: 'bar'
+      var result = simplifier({
+        allOf: [
+          {
+            additionalItems: {
+              properties: {
+                name: {
+                  type: 'string',
+                  pattern: 'bar'
+                }
+              }
+            }
+          }, {
+            additionalItems: {
+              properties: {
+                name: {
+                  type: 'string',
+                  pattern: 'foo'
+                }
               }
             }
           }
-        }, {
-          additionalItems: {
-            properties: {
-              name: {
-                type: 'string',
-                pattern: 'foo'
-              }
-            }
-          }
-        }
-      ]})
+        ]
+      })
 
       expect(result).to.eql({
         additionalItems: {
           properties: {
             name: {
               type: 'string',
-              allOf: [{
-                pattern: 'bar'
-              }, {
-                pattern: 'foo'
-              }]
+              allOf: [
+                {
+                  pattern: 'bar'
+                }, {
+                  pattern: 'foo'
+                }
+              ]
             }
           }
         }
@@ -935,17 +940,21 @@ describe('module', function() {
 
     it('extracts pattern from anyOf and oneOf using | operator in regexp')
 
-    it('merges multipleOf using allOf or direct assignment', function() {
-      var result = simplifier({allOf: [
-        {
-          title: 'foo',
-          type: ['number', 'integer'],
-          multipleOf: 2
-        }, {
-          type: 'integer',
-          multipleOf: 3
-        }
-      ]})
+    it.skip('merges multipleOf using allOf or direct assignment', function() {
+      var result = simplifier({
+        allOf: [
+          {
+            title: 'foo',
+            type: [
+              'number', 'integer'
+            ],
+            multipleOf: 2
+          }, {
+            type: 'integer',
+            multipleOf: 3
+          }
+        ]
+      })
 
       expect(result).to.eql({
         type: 'integer',
@@ -970,7 +979,7 @@ describe('module', function() {
       expect(result2).to.eql({multipleOf: 1})
     })
 
-    it.skip('merges multipleOf by finding common lowest number', function() {
+    it('merges multipleOf by finding common lowest number', function() {
       var result = simplifier({allOf: [
         {}, {
           multipleOf: 0.2,
@@ -1009,7 +1018,7 @@ describe('module', function() {
         }
       ]})
 
-      expect(result).to.eql({multipleOf: 54})
+      expect(result).to.eql({multipleOf: 6})
 
       expect(simplifier({
         allOf: [
@@ -1033,7 +1042,7 @@ describe('module', function() {
             multipleOf: 1
           }
         ]
-      })).to.eql({multipleOf: 2.1})
+      })).to.eql({multipleOf: 21})
 
       expect(simplifier({
         allOf: [
@@ -1079,20 +1088,19 @@ describe('module', function() {
             multipleOf: 3
           }
         ]
-      })).to.eql({multipleOf: 84})
+      })).to.eql({multipleOf: 42})
 
-      console.log(20 * 85 * 100 * 100)
       expect(simplifier({
         allOf: [
           {
             multipleOf: 0.2
           }, {
-            multipleOf: 0.85
+            multipleOf: 0.65
           }, {
             multipleOf: 1
           }
         ]
-      })).to.eql({multipleOf: 84})
+      })).to.eql({multipleOf: 13})
 
       expect(simplifier({
         allOf: [
@@ -1104,7 +1112,7 @@ describe('module', function() {
             multipleOf: 500000
           }
         ]
-      })).to.eql({multipleOf: 100000000000})
+      })).to.eql({multipleOf: 1000000})
     })
 
     it.skip('merges multipleOf using allOf', function() {
