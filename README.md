@@ -102,7 +102,7 @@ The function is passed:
 - **key** the name of the keyword that caused the resolver to be called (useful if you use the same resolver for multiple keywords)
 - **mergeSchemas** a function you can call that merges an array of schemas
 
-**combineAdditionalProperties** default **false**
+**ignoreAdditionalProperties** default **false**
 
 Allows you to combine schema properties even though some schemas have `additionalProperties: false` The resulting schema will still get additionalProperties set to false. This is the most common issue people face when trying to expand schemas using allOf and a limitation of the json schema spec.
 

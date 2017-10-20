@@ -8,9 +8,11 @@ var cloneDeep = require('lodash/cloneDeep')
 var Ajv = require('ajv')
 var computeLcm = require('compute-lcm')
 var intersection = require('lodash/intersection')
+var without = require('lodash/without')
 var intersectionWith = require('lodash/intersectionWith')
 var isPlainObject = require('lodash/isPlainObject')
 var sortBy = require('lodash/sortBy')
+var pullAll = require('lodash/pullAll')
 
 function getAllOf(schema) {
   if (Array.isArray(schema.allOf)) {
@@ -28,6 +30,23 @@ function getValues(schemas, key) {
   return schemas.map(function(schema) {
     return schema && schema[key]
   })
+}
+
+function keys(obj) {
+  if (isPlainObject(obj)) {
+    return Object.keys(obj)
+  } else {
+    return []
+  }
+}
+
+function withoutArr(arr) {
+  var rest = flatten([].slice.call(arguments, 1))
+  return without.apply(null, [arr].concat(rest))
+}
+
+function isPropertyRelated(key) {
+  return contains(propertyRelated, key)
 }
 
 function getAnyOfCombinations(arrOfArrays, combinations) {
@@ -55,6 +74,10 @@ function mergeWithArray(base, newItems) {
   } else {
     return newItems
   }
+}
+
+function isEmptySchema(obj) {
+  return (!keys(obj).length) && obj !== false && obj !== true
 }
 
 function isSchema(val) {
@@ -91,6 +114,8 @@ function notUndefined(val) {
   return val !== undefined
 }
 
+var propertyRelated = ['properties', 'patternProperties', 'additionalProperties']
+var itemsRelated = ['items', 'additionalItems']
 var schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
 var schemaArrays = ['anyOf', 'oneOf']
 var schemaProps = [
@@ -119,21 +144,62 @@ var defaultResolvers = {
       }
     }
   },
-  properties: function(compacted, key, mergeSchemas, totalSchemas) {
-    var allProperties = uniq(flattenDeep(compacted.map(function(properties) {
-      return Object.keys(properties)
-    })))
-
-    if (!compacted.length) {
-      return
+  properties: function(values, key, mergeSchemas, totalSchemas, options) {
+    // first get rid of all non permitted properties
+    if (!options.ignoreAdditionalProperties) {
+      values.forEach(function(subSchema) {
+        var otherSubSchemas = values.filter(s => s !== subSchema)
+        var ownKeys = keys(subSchema.properties)
+        var ownPatterns = keys(subSchema.patternProperties).map(k => new RegExp(k))
+        if (subSchema.additionalProperties === false) {
+          otherSubSchemas.forEach(function(other) {
+            var allOtherKeys = keys(other.properties)
+            var keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
+            var additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
+            additionalKeys.forEach(key => delete other.properties[key])
+          })
+        }
+      })
     }
 
-    return allProperties.reduce(function(all, propKey) {
-      var propSchemas = getValues(compacted, propKey)
+    // then merge the permitted ones
+    values.forEach(function(subSchema) {
+      var otherSubSchemas = values.filter(s => s !== subSchema)
+      var ownKeys = keys(subSchema.properties)
+      var ownPatterns = keys(subSchema.patternProperties).map(k => new RegExp(k))
+      if (isPlainObject(subSchema.additionalProperties)) {
+        otherSubSchemas.forEach(function(other) {
+          var allOtherKeys = keys(other.properties)
+          var keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
+          var additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
+          additionalKeys.forEach(function(key) {
+            other.properties[key] = mergeSchemas([other.properties[key], subSchema.additionalProperties])
+          })
+        })
+      }
+    })
 
-      var innerCompacted = uniqWith(propSchemas.filter(function(val) {
-        return val !== undefined
-      }), isEqual)
+    var properties = values.map(s => s.properties)
+    var allProperties = uniq(flattenDeep(properties.map(keys)))
+    var returnObject = {}
+
+    returnObject.additionalProperties = mergeSchemas(values.map(s => s.additionalProperties))
+    var allPatternProps = values.map(function(schema) {
+      return schema.patternProperties
+    })
+
+    var allPatternKeys = uniq(flattenDeep(allPatternProps.map(keys)))
+    returnObject.patternProperties = allPatternKeys.reduce(function(all, patternKey) {
+      var subSchemas = getValues(allPatternProps, patternKey)
+      var compacted = uniqWith(subSchemas.filter(notUndefined), isEqual)
+      all[patternKey] = mergeSchemas(compacted)
+      return all
+    }, {})
+
+    returnObject.properties = allProperties.reduce(function(all, propKey) {
+      var propSchemas = getValues(properties, propKey)
+
+      var innerCompacted = uniqWith(propSchemas.filter(notUndefined), isEqual)
 
       var foundBase = totalSchemas.find(function(schema) {
         return schema === all[propKey] && schema !== undefined && isPlainObject(schema)
@@ -144,17 +210,37 @@ var defaultResolvers = {
         return all
       }
 
-      // to support dependencies also
-      var allArray = innerCompacted.every(Array.isArray)
-      if (allArray) {
-        all[propKey] = stringArray(innerCompacted)
-        return all
-      }
-
       totalSchemas.splice.apply(totalSchemas, [0, 0].concat(innerCompacted))
       all[propKey] = mergeSchemas(innerCompacted, all[propKey] || {}, true)
       return all
-    }, compacted[0] || {})
+    }, properties[0] || {})
+
+    // cleanup empty
+    for (var prop in returnObject) {
+      if (returnObject.hasOwnProperty(prop) && isEmptySchema(returnObject[prop])) {
+        delete returnObject[prop]
+      }
+    }
+
+    return returnObject
+  },
+  dependencies: function(compacted, key, mergeSchemas) {
+    var allChildren = uniq(flattenDeep(compacted.map(keys)))
+
+    return allChildren.reduce(function(all, childKey) {
+      var childSchemas = getValues(compacted, childKey)
+      var innerCompacted = uniqWith(childSchemas.filter(notUndefined), isEqual)
+
+      // to support dependencies
+      var allArray = innerCompacted.every(Array.isArray)
+      if (allArray) {
+        all[childKey] = stringArray(innerCompacted)
+        return all
+      }
+
+      all[childKey] = mergeSchemas(innerCompacted)
+      return all
+    }, {})
   },
   items: function(compacted, key, mergeSchemas) {
     function getAllSchemas(arrayOfArrays, pos, max) {
@@ -267,23 +353,24 @@ defaultResolvers.additionalItems = schemaResolver
 defaultResolvers.anyOf = defaultResolvers.oneOf
 defaultResolvers.additionalProperties = schemaResolver
 defaultResolvers.propertyNames = schemaResolver
-defaultResolvers.definitions = defaultResolvers.properties
-defaultResolvers.patternProperties = defaultResolvers.properties
-defaultResolvers.dependencies = defaultResolvers.properties
+defaultResolvers.definitions = defaultResolvers.dependencies
 
 function simplifier(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
   var ajv = new Ajv()
   options = defaults(options, {
-    combineAdditionalProperties: false,
+    ignoreAdditionalProperties: false,
     resolvers: defaultResolvers
   })
 
   function mergeSchemas(schemas, base) {
-    schemas = cloneDeep(schemas)
+    schemas = cloneDeep(schemas.filter(notUndefined))
     var merged = isPlainObject(base)
       ? base
       : {}
+
+    // return undefined, an empty schema
+    if (!schemas.length) return
 
     if (schemas.some(isFalse)) {
       return false
@@ -296,22 +383,40 @@ function simplifier(rootSchema, options, totalSchemas) {
     // there are no false and we don't need the true ones as they accept everything
     schemas = schemas.filter(isPlainObject)
 
-    var incompatibleSchemas = schemas.some(function(schema) {
-      return schema.additionalProperties === false
-    })
-
-    if (incompatibleSchemas && schemas.length > 1 && !options.combineAdditionalProperties) {
-      throw new Error('One of your schemas has additionalProperties set to false. You have an invalid schema. Override by using option combineAdditionalProperties:true')
-    }
-
-    var allKeys = uniq(flattenDeep(schemas.map(function(schema) {
-      return Object.keys(schema)
-    })))
+    var allKeys = uniq(flattenDeep(schemas.map(keys)))
 
     if (contains(allKeys, 'allOf')) {
       return simplifier({
         allOf: schemas
       }, options, totalSchemas)
+    }
+
+    var propertyKeys = allKeys.filter(isPropertyRelated)
+
+    if (propertyKeys.length) {
+      var resolver = options.resolvers.properties
+      if (!resolver) {
+        throw new Error('No resolver found for properties.')
+      }
+
+      var compacted = uniqWith(schemas.map(function(schema) {
+        return propertyKeys.reduce(function(all, key) {
+          if (schema[key] !== undefined) {
+            all[key] = schema[key]
+          }
+          return all
+        }, {})
+      }).filter(notUndefined), isEqual)
+
+      var result = resolver(compacted, 'properties', mergeSchemas, totalSchemas, options)
+
+      if (!isPlainObject(result)) {
+        throwIncompatible(compacted, 'properties')
+      }
+
+      Object.assign(merged, result)
+
+      pullAll(allKeys, propertyKeys)
     }
 
     allKeys.forEach(function(key) {
@@ -366,7 +471,9 @@ function simplifier(rootSchema, options, totalSchemas) {
       throw new Error('Schema returned by resolver isn\'t valid.')
     }
   } catch (e) {
-    if (!/stack/i.test(e.message)) { throw e }
+    if (!/stack/i.test(e.message)) {
+      throw e
+    }
   }
 
   return merged

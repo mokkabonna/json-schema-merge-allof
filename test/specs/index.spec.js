@@ -1,8 +1,6 @@
 var chai = require('chai')
-// var _ = require('lodash')
 var simplifier = require('../../src')
 var $RefParser = require('json-schema-ref-parser')
-// var stringify = require('json-stringify-safe')
 
 var expect = chai.expect
 
@@ -1546,135 +1544,6 @@ describe('module', function() {
     })
   })
 
-  describe('additionalProperties', function() {
-    it('throws if additionalProperties is false', function() {
-      expect(function() {
-        simplifier({
-          allOf: [
-            {
-              additionalProperties: true
-            }, {
-              additionalProperties: false
-            }
-          ]
-        })
-      }).to.throw(/additionalProperties/)
-    })
-
-    it('does not throw if option combineAdditionalProperties is true', function() {
-      var result
-      expect(function() {
-        result = simplifier({
-          allOf: [
-            {
-              additionalProperties: true
-            }, {
-              additionalProperties: false
-            }
-          ]
-        }, {combineAdditionalProperties: true})
-      }).not.to.throw(/additionalProperties/)
-
-      expect(result).to.eql({additionalProperties: false})
-
-      var result2 = simplifier({
-        allOf: [
-          {
-            additionalProperties: true
-          }, {
-            additionalProperties: true
-          }
-        ]
-      })
-
-      expect(result2).to.eql({additionalProperties: true})
-    })
-
-    it('combines additionalProperties when schemas', function() {
-      var result = simplifier({
-        additionalProperties: true,
-        allOf: [
-          {
-            additionalProperties: {
-              type: [
-                'string', 'null'
-              ],
-              maxLength: 10
-            }
-          }, {
-            additionalProperties: {
-              type: [
-                'string', 'integer', 'null'
-              ],
-              maxLength: 8
-            }
-          }
-        ]
-      })
-
-      expect(result).to.eql({
-        additionalProperties: {
-          type: [
-            'string', 'null'
-          ],
-          maxLength: 8
-        }
-      })
-    })
-  })
-
-  describe('patternProperties', function() {
-    it('merges simliar schemas', function() {
-      var result = simplifier({
-        patternProperties: {
-          '^\\$.+': {
-            type: [
-              'string', 'null', 'integer'
-            ],
-            allOf: [
-              {
-                minimum: 5
-              }
-            ]
-          }
-        },
-        allOf: [
-          {
-            patternProperties: {
-              '^\\$.+': {
-                type: [
-                  'string', 'null'
-                ],
-                allOf: [
-                  {
-                    minimum: 7
-                  }
-                ]
-              },
-              '.*': {
-                type: 'null'
-              }
-            }
-          }
-        ]
-      })
-
-      expect(result).to.eql({
-        patternProperties: {
-          '^\\$.+': {
-            type: [
-              'string', 'null'
-            ],
-            minimum: 7
-          },
-          '.*': {
-            type: 'null'
-          }
-        }
-      })
-    })
-  })
-
   describe('dependencies', function() {
     it('merges simliar schemas', function() {
       var result = simplifier({
@@ -1841,12 +1710,6 @@ describe('module', function() {
           ]
         })
       })
-    })
-  })
-
-  describe('properties', function() {
-    describe('when property name has same as a reserved word', function() {
-      it('does not treat it as a reserved word')
     })
   })
 })
