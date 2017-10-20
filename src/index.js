@@ -86,7 +86,7 @@ function throwIncompatible(values, key) {
 }
 
 function schemaResolver(compacted, key, mergeSchemas, totalSchemas, parent) {
-  return mergeSchemas(compacted, parent || {})
+  return mergeSchemas(compacted, compacted[0])
 }
 
 function stringArray(values) {
@@ -166,7 +166,7 @@ var defaultResolvers = {
     function getAllSchemas(arrayOfArrays, pos, max) {
       var all = []
       for (var i = 0; i < max; i++) {
-        all.push(arrayOfArrays[i][pos])
+        all.push(arrayOfArrays[i] && arrayOfArrays[i][pos])
       }
 
       return flatten(all)
@@ -260,8 +260,8 @@ defaultResolvers.maximum = defaultResolvers.maxLength
 defaultResolvers.exclusiveMaximum = defaultResolvers.maxLength
 defaultResolvers.maxItems = defaultResolvers.maxLength
 defaultResolvers.maxProperties = defaultResolvers.maxLength
-defaultResolvers.contains = defaultResolvers.not
-defaultResolvers.additionalItems = defaultResolvers.not
+defaultResolvers.contains = schemaResolver
+defaultResolvers.additionalItems = schemaResolver
 defaultResolvers.anyOf = defaultResolvers.oneOf
 defaultResolvers.additionalProperties = schemaResolver
 defaultResolvers.propertyNames = schemaResolver
@@ -278,6 +278,7 @@ function simplifier(rootSchema, options, totalSchemas) {
   })
 
   function mergeSchemas(schemas, base) {
+    schemas = cloneDeep(schemas)
     var merged = isPlainObject(base)
       ? base
       : {}
@@ -306,10 +307,9 @@ function simplifier(rootSchema, options, totalSchemas) {
     })))
 
     if (contains(allKeys, 'allOf')) {
-      merged.allOf = Array.isArray(merged.allOf)
-        ? merged.allOf.concat(schemas)
-        : schemas
-      return simplifier(merged, options, totalSchemas)
+      return simplifier({
+        allOf: schemas
+      }, options, totalSchemas)
     }
 
     allKeys.forEach(function(key) {
