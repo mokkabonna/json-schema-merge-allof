@@ -1,6 +1,6 @@
 {
   "name": "json-schema-simplify",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Simplify your schema by combining rules like allOf, patternProperties, dependencies.",
   "main": "src/index.js",
   "scripts": {
