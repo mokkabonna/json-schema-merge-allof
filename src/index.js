@@ -170,20 +170,20 @@ var defaultResolvers = {
           })
         }
       })
-    }
 
-    // remove disallowed patternProperties
-    values.forEach(function(subSchema) {
-      var otherSubSchemas = values.filter(s => s !== subSchema)
-      var ownPatternKeys = keys(subSchema.patternProperties)
-      if (subSchema.additionalProperties === false) {
-        otherSubSchemas.forEach(function(other) {
-          var allOtherPatterns = keys(other.patternProperties)
-          var additionalPatternKeys = withoutArr(allOtherPatterns, ownPatternKeys)
-          additionalPatternKeys.forEach(key => delete other.patternProperties[key])
-        })
-      }
-    })
+      // remove disallowed patternProperties
+      values.forEach(function(subSchema) {
+        var otherSubSchemas = values.filter(s => s !== subSchema)
+        var ownPatternKeys = keys(subSchema.patternProperties)
+        if (subSchema.additionalProperties === false) {
+          otherSubSchemas.forEach(function(other) {
+            var allOtherPatterns = keys(other.patternProperties)
+            var additionalPatternKeys = withoutArr(allOtherPatterns, ownPatternKeys)
+            additionalPatternKeys.forEach(key => delete other.patternProperties[key])
+          })
+        }
+      })
+    }
 
     // then merge the permitted ones
     values.forEach(function(subSchema) {

@@ -962,34 +962,6 @@ describe('module', function() {
         multipleOf: 1000000
       })
     })
-
-    it.skip('merges multipleOf using allOf', function() {
-      var result = merger({
-        allOf: [{}, {
-          multipleOf: 10
-        }, {
-          multipleOf: 20
-        }]
-      })
-
-      expect(result).to.eql({
-        allOf: [{
-          multipleOf: 10
-        }, {
-          multipleOf: 20
-        }]
-      })
-
-      var result2 = merger({
-        allOf: [{
-          multipleOf: 10
-        }]
-      })
-
-      expect(result2).to.eql({
-        multipleOf: 10
-      })
-    })
   })
 
   describe('merging arrays', function() {
@@ -1435,71 +1407,6 @@ describe('module', function() {
           minLength: 5,
           maxLength: 7
         }
-      })
-    })
-  })
-
-  describe('items', function() {
-    describe('when single schema', function() {
-      it('merges them', function() {
-        var result = merger({
-          items: {
-            type: 'string',
-            allOf: [{
-              minLength: 5
-            }]
-          },
-          allOf: [{
-            items: {
-              type: 'string',
-              pattern: 'abc.*',
-              allOf: [{
-                maxLength: 7
-              }]
-            }
-          }]
-        })
-
-        expect(result).to.eql({
-          items: {
-            type: 'string',
-            pattern: 'abc.*',
-            minLength: 5,
-            maxLength: 7
-          }
-        })
-      })
-    })
-
-    describe('when array', function() {
-      it('merges them if possible', function() {
-        var result = merger({
-          items: [{
-            type: 'string',
-            allOf: [{
-              minLength: 5
-            }]
-          }],
-          allOf: [{
-            items: [{
-              type: 'string',
-              allOf: [{
-                minLength: 5
-              }]
-            }, {
-              type: 'integer'
-            }]
-          }]
-        })
-
-        expect(result).to.eql({
-          items: [{
-            type: 'string',
-            minLength: 5
-          }, {
-            type: 'integer'
-          }]
-        })
       })
     })
   })
