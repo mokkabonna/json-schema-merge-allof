@@ -12,7 +12,6 @@ var utils = require('./utils')
 var normalizeArray = val => Array.isArray(val)
   ? val
   : [val]
-
 var undef = val => val === undefined
 var has = (obj, key) => obj.hasOwnProperty(key)
 var stringArray = arr => sortBy(uniq(arr))
@@ -92,13 +91,7 @@ var acceptsUndefined = [
   'required'
 ]
 
-var schemaProps = [
-  'additionalProperties',
-  'additionalItems',
-  'contains',
-  'propertyNames',
-  'not'
-]
+var schemaProps = ['additionalProperties', 'additionalItems', 'contains', 'propertyNames', 'not']
 
 function compare(a, b, options) {
   options = defaults(options, {ignore: []})
@@ -137,17 +130,16 @@ function compare(a, b, options) {
   }
 
   return allKeys.every(function(key) {
-    var comparer = comparers[key]
-    if (!comparer) {
-      // throw new Error('No comparer found for key: ' + key)
-      comparer = isEqual
-    }
-
     var aValue = a[key]
     var bValue = b[key]
 
     if (schemaProps.indexOf(key) !== -1) {
       return compare(aValue, bValue, options)
+    }
+
+    var comparer = comparers[key]
+    if (!comparer) {
+      comparer = isEqual
     }
 
     // do simple lodash check first
