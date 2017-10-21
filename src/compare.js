@@ -12,7 +12,7 @@ var normalizeArray = val => Array.isArray(val)
   : [val]
 var stringArray = arr => sortBy(uniq(arr))
 var undefEmpty = val => val === undefined || (Array.isArray(val) && val.length === 0)
-var keyValEqual = (a, b, key, compare) => b.hasOwnProperty(key) && compare(a[key], b[key])
+var keyValEqual = (a, b, key, compare) => b && b.hasOwnProperty(key) && compare(a[key], b[key])
 var undefAndZero = (a, b) => (a === undefined && b === 0) || (b === undefined && a === 0)
 var falseUndefined = (a, b) => (a === undefined && b === false) || (b === undefined && a === false)
 
@@ -39,6 +39,16 @@ function schemaGroup(a, b, key, compare) {
   })
 }
 
+function items(a, b, key, compare) {
+  if (isPlainObject(a) && isPlainObject(b)) {
+    return compare(a, b)
+  } else if (Array.isArray(a) && Array.isArray(b)) {
+    return schemaGroup(a, b, key, compare)
+  } else {
+    return isEqual(a, b)
+  }
+}
+
 function emptySchema(schema) {
   return schema === undefined || isEqual(schema, {}) || schema === true
 }
@@ -56,7 +66,7 @@ var comparers = {
   required: undefArrayEqual,
   enum: undefArrayEqual,
   type: unsortedNormalizedArray,
-  items: schemaGroup,
+  items: items,
   properties: schemaGroup,
   patternProperties: schemaGroup,
   dependencies: schemaGroup
@@ -68,6 +78,8 @@ function compare(a, b, options) {
   if (emptySchema(a) && emptySchema(b)) { return true }
 
   if (!isSchema(a) || !isSchema(b)) {
+    console.log(a)
+    console.log(b)
     throw new Error('Either of the values are not a JSON schema.')
   }
 
@@ -96,7 +108,9 @@ function compare(a, b, options) {
   return allKeys.every(function(key) {
     var comparer = comparers[key]
     if (!comparer) {
-      throw new Error('No comparer found for key: ' + key)
+      console.log('USING DEFAULT LODASH COMPARER')
+      // throw new Error('No comparer found for key: ' + key)
+      comparer = isEqual
     }
 
     var aValue = a[key]

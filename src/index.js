@@ -13,6 +13,17 @@ var intersectionWith = require('lodash/intersectionWith')
 var isPlainObject = require('lodash/isPlainObject')
 var sortBy = require('lodash/sortBy')
 var pullAll = require('lodash/pullAll')
+var compare = require('./compare')
+
+function compareProp(key) {
+  return function(a, b) {
+    return compare({
+      [key]: a
+    }, {
+      [key]: b
+    })
+  }
+}
 
 function getAllOf(schema) {
   if (Array.isArray(schema.allOf)) {
@@ -191,7 +202,7 @@ var defaultResolvers = {
     var allPatternKeys = uniq(flattenDeep(allPatternProps.map(keys)))
     returnObject.patternProperties = allPatternKeys.reduce(function(all, patternKey) {
       var subSchemas = getValues(allPatternProps, patternKey)
-      var compacted = uniqWith(subSchemas.filter(notUndefined), isEqual)
+      var compacted = uniqWith(subSchemas.filter(notUndefined), compare)
       all[patternKey] = mergeSchemas(compacted)
       return all
     }, {})
@@ -199,7 +210,7 @@ var defaultResolvers = {
     returnObject.properties = allProperties.reduce(function(all, propKey) {
       var propSchemas = getValues(properties, propKey)
 
-      var innerCompacted = uniqWith(propSchemas.filter(notUndefined), isEqual)
+      var innerCompacted = uniqWith(propSchemas.filter(notUndefined), compare)
 
       var foundBase = totalSchemas.find(function(schema) {
         return schema === all[propKey] && schema !== undefined && isPlainObject(schema)
@@ -238,6 +249,8 @@ var defaultResolvers = {
         return all
       }
 
+      innerCompacted = uniqWith(innerCompacted, compare)
+
       all[childKey] = mergeSchemas(innerCompacted)
       return all
     }, {})
@@ -261,7 +274,7 @@ var defaultResolvers = {
       }, 0)
 
       return compacted.reduce(function(all, items, pos) {
-        var schemasAtCurrentPos = uniqWith(getAllSchemas(compacted, pos, max).filter(notUndefined), isEqual)
+        var schemasAtCurrentPos = uniqWith(getAllSchemas(compacted, pos, max).filter(notUndefined), compare)
 
         if (schemasAtCurrentPos.length !== 1) {
           throwIncompatible(schemasAtCurrentPos, key)
@@ -282,7 +295,7 @@ var defaultResolvers = {
       }
     }).filter(notUndefined)
 
-    var unique = uniqWith(result, isEqual)
+    var unique = uniqWith(result, compare)
 
     // TODO implement merging to main schema if only one left
     if (unique.length) {
@@ -370,7 +383,7 @@ function simplifier(rootSchema, options, totalSchemas) {
       : {}
 
     // return undefined, an empty schema
-    if (!schemas.length) return
+    if (!schemas.length) { return }
 
     if (schemas.some(isFalse)) {
       return false
@@ -406,7 +419,7 @@ function simplifier(rootSchema, options, totalSchemas) {
           }
           return all
         }, {})
-      }).filter(notUndefined), isEqual)
+      }).filter(notUndefined), compare)
 
       var result = resolver(compacted, 'properties', mergeSchemas, totalSchemas, options)
 
@@ -421,7 +434,7 @@ function simplifier(rootSchema, options, totalSchemas) {
 
     allKeys.forEach(function(key) {
       var values = getValues(schemas, key)
-      var compacted = uniqWith(values.filter(notUndefined), isEqual)
+      var compacted = uniqWith(values.filter(notUndefined), compareProp(key))
 
       // arrayprops like anyOf and oneOf must be merged first, as they contains schemas
       // allOf is treated differently alltogether
