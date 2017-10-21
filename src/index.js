@@ -126,7 +126,6 @@ function notUndefined(val) {
 }
 
 var propertyRelated = ['properties', 'patternProperties', 'additionalProperties']
-var itemsRelated = ['items', 'additionalItems']
 var schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
 var schemaArrays = ['anyOf', 'oneOf']
 var schemaProps = [

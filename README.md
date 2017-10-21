@@ -1,5 +1,10 @@
 # json-schema-merge-allof [![Build Status](https://travis-ci.org/mokkabonna/json-shcema-merge-allof.svg?branch=master)](https://travis-ci.org/mokkabonna/json-shcema-merge-allof) [![Coverage Status](https://coveralls.io/repos/github/mokkabonna/json-shcema-merge-allof/badge.svg?branch=master)](https://coveralls.io/github/mokkabonna/json-shcema-merge-allof?branch=master)
 
+> Merge schemas combined using allOf into a more readable composed schema free from allOf.
+
+```bash
+npm install json-schema-compare --save
+```
 
 ## Features
 
