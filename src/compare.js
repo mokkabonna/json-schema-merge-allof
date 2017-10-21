@@ -154,7 +154,7 @@ function compare(a, b, options) {
     }
 
     var result = comparer(aValue, bValue, key, innerCompare)
-    if (result !== true && result !== false) {
+    if (!isBoolean(result)) {
       throw new Error('Comparer must return true or false')
     }
     return result
