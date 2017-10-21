@@ -13,7 +13,7 @@ var intersectionWith = require('lodash/intersectionWith')
 var isPlainObject = require('lodash/isPlainObject')
 var sortBy = require('lodash/sortBy')
 var pullAll = require('lodash/pullAll')
-var compare = require('./compare')
+var compare = require('json-schema-compare')
 
 function compareProp(key) {
   return function(a, b) {
