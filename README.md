@@ -153,13 +153,11 @@ The library will then throw an error reporting the values that had no valid inte
 ## Roadmap
 
 - [ ] Treat the interdependent validations like properties and additionalProperties as one resolver
-- [ ] Implement a proper compare function that ignores sort on required, type, etc. And possibly title, description, etc.
 - [ ] Extract repeating validators from anyOf/oneOf and merge them with parent schema
 - [ ] After extraction of validators from anyOf/oneOf, compare them and remove duplicates.
 - [ ] If left with only one in anyOf/oneOf then merge it to the parent schema.
 - [ ] Expose seperate tools for validation, extraction
 - [ ] Consider adding even more logical validation (like minLength <= maxLength)
-
 
 ## Contributing
 
