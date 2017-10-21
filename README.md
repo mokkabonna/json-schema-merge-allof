@@ -9,6 +9,7 @@ npm install json-schema-compare --save
 ## Features
 
 - **Real** and **safe** merging of schemas combined with **allOf**
+- Lossless in terms of validation rules, merged schema does not validate more or less than original schema
 - Results in a more readable root schema
 - Removes almost all logical impossibilities
 - Throws if no logical intersection is found (your schema would not validate anything from the start)
