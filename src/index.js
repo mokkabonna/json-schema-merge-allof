@@ -1,19 +1,19 @@
+var Ajv = require('ajv')
+var cloneDeep = require('lodash/cloneDeep')
+var compare = require('json-schema-compare')
+var computeLcm = require('compute-lcm')
+var defaults = require('lodash/defaults')
 var flatten = require('lodash/flatten')
 var flattenDeep = require('lodash/flattenDeep')
+var intersection = require('lodash/intersection')
+var intersectionWith = require('lodash/intersectionWith')
+var isEqual = require('lodash/isEqual')
+var isPlainObject = require('lodash/isPlainObject')
+var pullAll = require('lodash/pullAll')
+var sortBy = require('lodash/sortBy')
 var uniq = require('lodash/uniq')
 var uniqWith = require('lodash/uniqWith')
-var defaults = require('lodash/defaults')
-var isEqual = require('lodash/isEqual')
-var cloneDeep = require('lodash/cloneDeep')
-var Ajv = require('ajv')
-var computeLcm = require('compute-lcm')
-var intersection = require('lodash/intersection')
 var without = require('lodash/without')
-var intersectionWith = require('lodash/intersectionWith')
-var isPlainObject = require('lodash/isPlainObject')
-var sortBy = require('lodash/sortBy')
-var pullAll = require('lodash/pullAll')
-var compare = require('json-schema-compare')
 
 function compareProp(key) {
   return function(a, b) {
@@ -142,8 +142,7 @@ var defaultResolvers = {
     if (compacted.some(Array.isArray)) {
       var normalized = compacted.map(function(val) {
         return Array.isArray(val)
-          ? val
-          : [val]
+          ? val : [val]
       })
       var common = intersection.apply(null, normalized)
 
@@ -302,7 +301,9 @@ var defaultResolvers = {
     }
   },
   not: function(compacted) {
-    return {anyOf: compacted}
+    return {
+      anyOf: compacted
+    }
   },
   first: function(compacted) {
     return compacted[0]
@@ -318,7 +319,9 @@ var defaultResolvers = {
   },
   pattern: function(compacted, key, mergeSchemas, totalSchemas, reportUnresolved) {
     reportUnresolved(compacted.map(function(regexp) {
-      return {[key]: regexp}
+      return {
+        [key]: regexp
+      }
     }))
   },
   multipleOf: function(compacted) {
@@ -378,11 +381,12 @@ function merger(rootSchema, options, totalSchemas) {
   function mergeSchemas(schemas, base) {
     schemas = cloneDeep(schemas.filter(notUndefined))
     var merged = isPlainObject(base)
-      ? base
-      : {}
+      ? base : {}
 
     // return undefined, an empty schema
-    if (!schemas.length) { return }
+    if (!schemas.length) {
+      return
+    }
 
     if (schemas.some(isFalse)) {
       return false
@@ -445,9 +449,10 @@ function merger(rootSchema, options, totalSchemas) {
       } else if (compacted.length === 1 && !contains(schemaGroupProps, key) && !contains(schemaProps, key)) {
         merged[key] = compacted[0]
       } else {
-        var resolver = options.resolvers[key]
+        var resolver = options.resolvers[key] || options.resolvers.defaultResolver
+
         if (!resolver) {
-          throw new Error('No resolver found for key ' + key)
+          throw new Error('No resolver found for key ' + key + '. You can provide a resolver for this keyword in the options, or provide a default resolver.')
         }
 
         var calledWithArray = false
@@ -489,6 +494,10 @@ function merger(rootSchema, options, totalSchemas) {
   }
 
   return merged
+}
+
+merger.options = {
+  resolvers: defaultResolvers
 }
 
 module.exports = merger

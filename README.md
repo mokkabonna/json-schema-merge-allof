@@ -106,6 +106,18 @@ The function is passed:
 - **key** the name of the keyword that caused the resolver to be called (useful if you use the same resolver for multiple keywords)
 - **mergeSchemas** a function you can call that merges an array of schemas
 
+You can set a default resolver that catches any unknown keyword. Let's say you want to use the same strategy as the ones for the meta keywords, to use the first value found. You van accomplish that like this:
+
+```js
+mergeJsonSchema({
+  ...
+}, {
+  resolvers: {
+    defaultResolver: mergeJsonSchema.options.resolvers.title
+  }
+})
+```
+
 **ignoreAdditionalProperties** default **false**
 
 Allows you to combine schema properties even though some schemas have `additionalProperties: false` The resulting schema will still get additionalProperties set to false. This is the most common issue people face when trying to expand schemas using allOf and a limitation of the json schema spec.
