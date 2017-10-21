@@ -9,6 +9,9 @@ var compare = function(a, b, expected, options) {
 
 describe('comparison', function() {
   describe('validation only', function() {
+    it('compares false and undefined', function() {
+      compare(undefined, false, false)
+    })
     it('compares required unsorted', function() {
       compare({
         required: ['test', 'rest']
@@ -28,8 +31,7 @@ describe('comparison', function() {
     it('compares equal properties empty object and undefined', function() {
       compare({
         properties: {}
-      }, {
-      }, true)
+      }, {}, true)
     })
     it('compares properties', function() {
       compare({
@@ -49,14 +51,12 @@ describe('comparison', function() {
     it('compares equal patternProperties empty object and undefined', function() {
       compare({
         patternProperties: {}
-      }, {
-      }, true)
+      }, {}, true)
     })
     it('compares equal dependencies empty object and undefined', function() {
       compare({
         dependencies: {}
-      }, {
-      }, true)
+      }, {}, true)
     })
     it('compares type unsorted', function() {
       compare({
@@ -65,8 +65,7 @@ describe('comparison', function() {
         type: ['array', 'string', 'array']
       }, true)
 
-      compare({
-      }, {
+      compare({}, {
         type: []
       }, false)
 
@@ -87,13 +86,257 @@ describe('comparison', function() {
         title: 'title'
       }, {
         title: 'foobar'
-      }, true, {
-        ignore: ['title']
-      })
+      }, true, {ignore: ['title']})
     })
-    it('sorts anyOf before comparing.. HOW??')
-    it('sorts oneOf before comparing.. HOW??')
-    it('sorts allOf before comparing.. HOW??')
+
+    it('diffs this', function() {
+      compare({
+        type: ['string'],
+        minLength: 5
+      }, {
+        type: ['string']
+      }, false)
+    })
+    it('sorts anyOf before comparing', function() {
+      compare({
+        anyOf: [
+          {
+            type: 'string'
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        anyOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'string'
+          }
+        ]
+      }, true)
+
+      compare({
+        anyOf: [
+          {
+            type: 'string'
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        anyOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'string'
+          },
+          {
+            type: ['string'],
+            minLength: 5,
+            fdsafads: '34534'
+          }
+        ]
+      }, false)
+
+      compare({
+        anyOf: [
+          {
+            type: 'string'
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        anyOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'array'
+          }
+        ]
+      }, false)
+
+      compare({
+        anyOf: [
+          {
+            type: 'string'
+          }, {
+            type: ['string']
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        anyOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'string'
+          }
+        ]
+      }, true)
+    })
+    it('sorts allOf before comparing', function() {
+      compare({
+        allOf: [
+          {
+            type: 'string'
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        allOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'string'
+          }
+        ]
+      }, true)
+
+      compare({
+        allOf: [
+          {
+            type: 'string'
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        allOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'string'
+          },
+          {
+            type: ['string'],
+            minLength: 5,
+            fdsafads: '34534'
+          }
+        ]
+      }, false)
+
+      compare({
+        allOf: [
+          {
+            type: 'string'
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        allOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'array'
+          }
+        ]
+      }, false)
+
+      compare({
+        allOf: [
+          {
+            type: 'string'
+          }, {
+            type: ['string']
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        allOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'string'
+          }
+        ]
+      }, true)
+    })
+    it('sorts oneOf before comparing', function() {
+      compare({
+        oneOf: [
+          {
+            type: 'string'
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        oneOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'string'
+          }
+        ]
+      }, true)
+
+      compare({
+        oneOf: [
+          {
+            type: 'string'
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        oneOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'string'
+          },
+          {
+            type: ['string'],
+            minLength: 5,
+            fdsafads: '34534'
+          }
+        ]
+      }, false)
+
+      compare({
+        oneOf: [
+          {
+            type: 'string'
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        oneOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'array'
+          }
+        ]
+      }, false)
+
+      compare({
+        oneOf: [
+          {
+            type: 'string'
+          }, {
+            type: ['string']
+          }, {
+            type: 'integer'
+          }
+        ]
+      }, {
+        oneOf: [
+          {
+            type: 'integer'
+          }, {
+            type: 'string'
+          }
+        ]
+      }, true)
+    })
     it('compares enum unsorted', function() {
       compare({
         enum: ['abc', '123']

@@ -1,8 +1,10 @@
 var isEqual = require('lodash/isEqual')
 var sortBy = require('lodash/sortBy')
 var uniq = require('lodash/uniq')
+var uniqWith = require('lodash/uniqWith')
 var every = require('lodash/every')
 var defaults = require('lodash/defaults')
+var intersectionWith = require('lodash/intersectionWith')
 var isPlainObject = require('lodash/isPlainObject')
 var isBoolean = require('lodash/isBoolean')
 var utils = require('./utils')
@@ -10,11 +12,16 @@ var utils = require('./utils')
 var normalizeArray = val => Array.isArray(val)
   ? val
   : [val]
+
+var undef = val => val === undefined
+var has = (obj, key) => obj.hasOwnProperty(key)
 var stringArray = arr => sortBy(uniq(arr))
-var undefEmpty = val => val === undefined || (Array.isArray(val) && val.length === 0)
-var keyValEqual = (a, b, key, compare) => b && b.hasOwnProperty(key) && compare(a[key], b[key])
-var undefAndZero = (a, b) => (a === undefined && b === 0) || (b === undefined && a === 0)
-var falseUndefined = (a, b) => (a === undefined && b === false) || (b === undefined && a === false)
+var undefEmpty = val => undef(val) || (Array.isArray(val) && val.length === 0)
+var keyValEqual = (a, b, key, compare) => b && has(b, key) && compare(a[key], b[key])
+var undefAndZero = (a, b) => (undef(a) && b === 0) || (undef(b) && a === 0) || isEqual(a, b)
+var falseUndefined = (a, b) => (undef(a) && b === false) || (undef(b) && a === false) || isEqual(a, b)
+var emptySchema = schema => undef(schema) || isEqual(schema, {}) || schema === true
+var isSchema = val => undef(val) || isPlainObject(val) || val === true || val === false
 
 function undefArrayEqual(a, b) {
   if (undefEmpty(a) && undefEmpty(b)) {
@@ -49,12 +56,11 @@ function items(a, b, key, compare) {
   }
 }
 
-function emptySchema(schema) {
-  return schema === undefined || isEqual(schema, {}) || schema === true
-}
-
-function isSchema(val) {
-  return isPlainObject(val) || val === true || val === false
+function unsortedArray(a, b, key, compare) {
+  var uniqueA = uniqWith(a, compare)
+  var uniqueB = uniqWith(b, compare)
+  var inter = intersectionWith(uniqueA, uniqueB, compare)
+  return inter.length === Math.max(uniqueA.length, uniqueB.length)
 }
 
 var comparers = {
@@ -67,28 +73,53 @@ var comparers = {
   enum: undefArrayEqual,
   type: unsortedNormalizedArray,
   items: items,
+  anyOf: unsortedArray,
+  allOf: unsortedArray,
+  oneOf: unsortedArray,
   properties: schemaGroup,
   patternProperties: schemaGroup,
   dependencies: schemaGroup
 }
 
+var acceptsUndefined = [
+  'properties',
+  'patternProperties',
+  'dependencies',
+  'uniqueItems',
+  'minLength',
+  'minItems',
+  'minProperties',
+  'required'
+]
+
+var schemaProps = [
+  'additionalProperties',
+  'additionalItems',
+  'contains',
+  'propertyNames',
+  'not'
+]
+
 function compare(a, b, options) {
   options = defaults(options, {ignore: []})
 
-  if (emptySchema(a) && emptySchema(b)) { return true }
-
-  if (!isSchema(a) || !isSchema(b)) {
-    console.log(a)
-    console.log(b)
-    throw new Error('Either of the values are not a JSON schema.')
+  if (emptySchema(a) && emptySchema(b)) {
+    return true
   }
 
+  if (!isSchema(a) || !isSchema(b)) {
+    throw new Error('Either of the values are not a JSON schema.')
+  }
   if (a === b) {
     return true
   }
 
   if (isBoolean(a) && isBoolean(b)) {
     return a === b
+  }
+
+  if ((a === undefined && b === false) || (b === undefined && a === false)) {
+    return false
   }
 
   var allKeys = uniq(utils.keys(a).concat(utils.keys(b)))
@@ -108,7 +139,6 @@ function compare(a, b, options) {
   return allKeys.every(function(key) {
     var comparer = comparers[key]
     if (!comparer) {
-      console.log('USING DEFAULT LODASH COMPARER')
       // throw new Error('No comparer found for key: ' + key)
       comparer = isEqual
     }
@@ -116,9 +146,19 @@ function compare(a, b, options) {
     var aValue = a[key]
     var bValue = b[key]
 
+    if (schemaProps.indexOf(key) !== -1) {
+      return compare(aValue, bValue, options)
+    }
+
     // do simple lodash check first
     if (isEqual(aValue, bValue)) {
       return true
+    }
+
+    if (acceptsUndefined.indexOf(key) === -1) {
+      if ((!has(a, key) && has(b, key)) || (has(a, key) && !has(b, key))) {
+        return aValue === bValue
+      }
     }
 
     var result = comparer(aValue, bValue, key, innerCompare)

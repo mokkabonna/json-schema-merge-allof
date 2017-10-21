@@ -208,7 +208,7 @@ describe('properties', function() {
         ]
       })
 
-      expect(result2).to.eql({additionalProperties: true})
+      expect(result2).to.eql({})
     })
 
     it('applies additionalProperties to other schemas properties if they have any', function() {
