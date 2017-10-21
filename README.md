@@ -138,7 +138,7 @@ For meta keywords like title, description, $id, $schema, default the strategy is
 
 ## $ref
 
-If one of your schemas contain a $ref property you should resolve them using a ref resolver like [json-schema-ref-parser](https://github.com/BigstickCarpet/json-schema-ref-parser) to dereference your schema for you first. Resolving $refs are not the task of this library.
+If one of your schemas contain a $ref property you should resolve them using a ref resolver like [json-schema-ref-parser](https://github.com/BigstickCarpet/json-schema-ref-parser) to dereference your schema for you first. Resolving $refs is not the task of this library.
 
 
 ## Other libraries
