@@ -9,17 +9,13 @@ npm install json-schema-compare --save
 ## Features
 
 - **Real** and **safe** merging of schemas combined with **allOf**
-- Remove redundant keywords found in anyOf/oneOf
 - Results in a more readable root schema
 - Removes almost all logical impossibilities
-- Throws if no logical intersection is found (your schema would not validate anything)
-- Validates in a way not possible by regular simple meta validators.
-- Pluggable
+- Throws if no logical intersection is found (your schema would not validate anything from the start)
+- Validates in a way not possible by regular simple meta validators
+- Pluggable keyword resolvers
 - Option to override common impossibility like adding properties when using **additionalProperties: false**
-- Compare 2 schemas logically
 - Supports all json schema keywords
-- Supports schemas with circular references
-
 
 ## How
 
@@ -128,7 +124,7 @@ For meta keywords like title, description, $id, $schema, default the strategy is
 
 ## $ref
 
-If one of your schemas contain a $ref property you should resolve them using a ref resolver like [json-schema-ref-parser](https://github.com/BigstickCarpet/json-schema-ref-parser) to dereference your schema for you first. Resolving $refs are not the task of this library. Circular references like the ones possibly created by json-schema-ref-parser are supported.
+If one of your schemas contain a $ref property you should resolve them using a ref resolver like [json-schema-ref-parser](https://github.com/BigstickCarpet/json-schema-ref-parser) to dereference your schema for you first. Resolving $refs are not the task of this library.
 
 
 ## Other libraries
