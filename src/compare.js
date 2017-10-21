@@ -7,7 +7,6 @@ var defaults = require('lodash/defaults')
 var intersectionWith = require('lodash/intersectionWith')
 var isPlainObject = require('lodash/isPlainObject')
 var isBoolean = require('lodash/isBoolean')
-var utils = require('./utils')
 
 var normalizeArray = val => Array.isArray(val)
   ? val
@@ -115,7 +114,7 @@ function compare(a, b, options) {
     return false
   }
 
-  var allKeys = uniq(utils.keys(a).concat(utils.keys(b)))
+  var allKeys = uniq(Object.keys(a).concat(Object.keys(b)))
 
   if (options.ignore.length) {
     allKeys = allKeys.filter(k => options.ignore.indexOf(k) === -1)
