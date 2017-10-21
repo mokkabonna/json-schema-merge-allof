@@ -2,7 +2,7 @@ var chai = require('chai')
 var merger = require('../../src')
 var expect = chai.expect
 
-describe.only('items', function() {
+describe('items', function() {
   it('merges additionalItems', function() {
     var result = merger({
       allOf: [{
@@ -74,7 +74,7 @@ describe.only('items', function() {
   })
 
   describe('when array', function() {
-    it('merges them if possible', function() {
+    it('merges them in when additionalItems are all undefined', function() {
       var result = merger({
         items: [{
           type: 'string',
@@ -103,5 +103,40 @@ describe.only('items', function() {
         }]
       })
     })
+
+    it('merges in additionalItems from one if present', function() {
+      var result = merger({
+        items: [{
+          type: 'string',
+          allOf: [{
+            minLength: 5
+          }]
+        }],
+        additionalItems: false,
+        allOf: [{
+          items: [{
+            type: 'string',
+            allOf: [{
+              minLength: 5
+            }]
+          }, {
+            type: 'integer'
+          }]
+        }]
+      })
+
+      expect(result).to.eql({
+        additionalItems: false,
+        items: [{
+          type: 'string',
+          minLength: 5
+        }]
+      })
+    })
+  })
+
+  describe('when mixed array and object', function() {
+    it('merges then maybe??')
+    it('considers additionalItems')
   })
 })

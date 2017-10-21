@@ -11,6 +11,7 @@ var isEqual = require('lodash/isEqual')
 var isPlainObject = require('lodash/isPlainObject')
 var pullAll = require('lodash/pullAll')
 var sortBy = require('lodash/sortBy')
+var forEach = require('lodash/forEach')
 var uniq = require('lodash/uniq')
 var uniqWith = require('lodash/uniqWith')
 var without = require('lodash/without')
@@ -161,14 +162,14 @@ var defaultResolvers = {
         var ownKeys = keys(subSchema.properties)
         var ownPatternKeys = keys(subSchema.patternProperties)
         var ownPatterns = ownPatternKeys.map(k => new RegExp(k))
-        if (subSchema.additionalProperties === false) {
-          otherSubSchemas.forEach(function(other) {
-            var allOtherKeys = keys(other.properties)
-            var keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
-            var additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
-            additionalKeys.forEach(key => delete other.properties[key])
+        otherSubSchemas.forEach(function(other) {
+          var allOtherKeys = keys(other.properties)
+          var keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
+          var additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
+          additionalKeys.forEach(function(key) {
+            other.properties[key] = mergeSchemas([other.properties[key], subSchema.additionalProperties])
           })
-        }
+        })
       })
 
       // remove disallowed patternProperties
@@ -184,23 +185,6 @@ var defaultResolvers = {
         }
       })
     }
-
-    // then merge the permitted ones
-    values.forEach(function(subSchema) {
-      var otherSubSchemas = values.filter(s => s !== subSchema)
-      var ownKeys = keys(subSchema.properties)
-      var ownPatterns = keys(subSchema.patternProperties).map(k => new RegExp(k))
-      if (isPlainObject(subSchema.additionalProperties)) {
-        otherSubSchemas.forEach(function(other) {
-          var allOtherKeys = keys(other.properties)
-          var keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
-          var additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
-          additionalKeys.forEach(function(key) {
-            other.properties[key] = mergeSchemas([other.properties[key], subSchema.additionalProperties])
-          })
-        })
-      }
-    })
 
     var properties = values.map(s => s.properties)
     var allProperties = uniq(flattenDeep(properties.map(keys)))
@@ -237,6 +221,14 @@ var defaultResolvers = {
       all[propKey] = mergeSchemas(innerCompacted, all[propKey] || {}, true)
       return all
     }, properties[0] || {})
+
+    if (returnObject.additionalProperties === false) {
+      forEach(returnObject.properties, function(schema, prop) {
+        if (schema === false) {
+          delete returnObject.properties[prop]
+        }
+      })
+    }
 
     // cleanup empty
     for (var prop in returnObject) {
@@ -280,7 +272,6 @@ var defaultResolvers = {
     if (compacted.every(isSchema)) {
       return schemaResolver.apply(null, arguments)
     } else if (compacted.every(Array.isArray)) {
-      // TODO get max items
       var max = compacted.reduce(function(sum, b) {
         return Math.max(sum, b.length)
       }, 0)
