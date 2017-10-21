@@ -1,5 +1,6 @@
 # json-schema-merge-allof [![Build Status](https://travis-ci.org/mokkabonna/json-shcema-merge-allof.svg?branch=master)](https://travis-ci.org/mokkabonna/json-shcema-merge-allof) [![Coverage Status](https://coveralls.io/repos/github/mokkabonna/json-shcema-merge-allof/badge.svg?branch=master)](https://coveralls.io/github/mokkabonna/json-shcema-merge-allof?branch=master)
 
+
 ## Features
 
 - **Real** and **safe** merging of schemas combined with **allOf**
