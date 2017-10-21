@@ -1,12 +1,12 @@
 var chai = require('chai')
-var simplifier = require('../../src')
+var merger = require('../../src')
 var $RefParser = require('json-schema-ref-parser')
 
 var expect = chai.expect
 
 describe('module', function() {
   it('combines simple usecase', function() {
-    var result = simplifier({
+    var result = merger({
       allOf: [
         {
           type: 'string',
@@ -22,7 +22,7 @@ describe('module', function() {
   })
 
   it('combines without allOf', function() {
-    var result = simplifier({
+    var result = merger({
       properties: {
         foo: {
           type: 'string'
@@ -41,7 +41,7 @@ describe('module', function() {
 
   describe('simple resolve functionality', function() {
     it('merges with default resolver if not defined resolver', function() {
-      var result = simplifier({
+      var result = merger({
         title: 'schema1',
         allOf: [
           {
@@ -54,7 +54,7 @@ describe('module', function() {
 
       expect(result).to.eql({title: 'schema1'})
 
-      var result3 = simplifier({
+      var result3 = merger({
         allOf: [
           {
             title: 'schema2'
@@ -68,7 +68,7 @@ describe('module', function() {
     })
 
     it('merges minLength if conflict', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             minLength: 1
@@ -82,7 +82,7 @@ describe('module', function() {
     })
 
     it('merges minimum if conflict', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             minimum: 1
@@ -96,7 +96,7 @@ describe('module', function() {
     })
 
     it('merges exclusiveMinimum if conflict', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             exclusiveMinimum: 1
@@ -110,7 +110,7 @@ describe('module', function() {
     })
 
     it('merges minItems if conflict', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             minItems: 1
@@ -124,7 +124,7 @@ describe('module', function() {
     })
 
     it('merges maximum if conflict', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             maximum: 1
@@ -138,7 +138,7 @@ describe('module', function() {
     })
 
     it('merges exclusiveMaximum if conflict', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             exclusiveMaximum: 1
@@ -152,7 +152,7 @@ describe('module', function() {
     })
 
     it('merges maxItems if conflict', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             maxItems: 1
@@ -166,7 +166,7 @@ describe('module', function() {
     })
 
     it('merges maxLength if conflict', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             maxLength: 4
@@ -180,7 +180,7 @@ describe('module', function() {
     })
 
     it('merges uniqueItems to most restrictive if conflict', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             uniqueItems: true
@@ -192,7 +192,7 @@ describe('module', function() {
 
       expect(result).to.eql({uniqueItems: true})
 
-      expect(simplifier({
+      expect(merger({
         allOf: [
           {
             uniqueItems: false
@@ -205,7 +205,7 @@ describe('module', function() {
 
     it('throws if merging incompatible type', function() {
       expect(function() {
-        simplifier({
+        merger({
           allOf: [
             {
               type: 'null'
@@ -218,7 +218,7 @@ describe('module', function() {
     })
 
     it('merges type if conflict', function() {
-      var result = simplifier({allOf: [
+      var result = merger({allOf: [
         {}, {
           type: ['string', 'null', 'object', 'array']
         }, {
@@ -232,7 +232,7 @@ describe('module', function() {
         type: ['string', 'null']
       })
 
-      var result2 = simplifier({allOf: [
+      var result2 = merger({allOf: [
         {}, {
           type: ['string', 'null', 'object', 'array']
         }, {
@@ -245,7 +245,7 @@ describe('module', function() {
       expect(result2).to.eql({type: 'string'})
 
       expect(function() {
-        simplifier({
+        merger({
           allOf: [
             {
               type: ['null']
@@ -258,7 +258,7 @@ describe('module', function() {
     })
 
     it('merges enum', function() {
-      var result = simplifier({allOf: [
+      var result = merger({allOf: [
         {}, {
           enum: [
             'string',
@@ -291,7 +291,7 @@ describe('module', function() {
 
     it('throws if enum is incompatible', function() {
       expect(function() {
-        simplifier({allOf: [
+        merger({allOf: [
           {}, {
             enum: ['string', {}]
           }, {
@@ -301,7 +301,7 @@ describe('module', function() {
       }).not.to.throw(/incompatible/)
 
       expect(function() {
-        simplifier({allOf: [
+        merger({allOf: [
           {}, {
             enum: ['string', {}]
           }, {
@@ -312,7 +312,7 @@ describe('module', function() {
     })
 
     it('merges const', function() {
-      var result = simplifier({allOf: [
+      var result = merger({allOf: [
         {}, {
           const: ['string', {}]
         }, {
@@ -326,7 +326,7 @@ describe('module', function() {
     })
 
     it('merges anyOf', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             anyOf: [
@@ -358,7 +358,7 @@ describe('module', function() {
     })
 
     it('merges anyOf by finding valid combinations', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             anyOf: [
@@ -394,7 +394,7 @@ describe('module', function() {
     })
 
     it.skip('extracts common logic', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             anyOf: [
@@ -439,7 +439,7 @@ describe('module', function() {
     })
 
     it.skip('merges anyOf into main schema if left with only one combination', function() {
-      var result = simplifier({
+      var result = merger({
         required: ['abc'],
         allOf: [
           {
@@ -466,7 +466,7 @@ describe('module', function() {
     })
 
     it('merges nested allOf if inside singular anyOf', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             anyOf: [
@@ -504,7 +504,7 @@ describe('module', function() {
 
     it('throws if no intersection at all', function() {
       expect(function() {
-        simplifier({
+        merger({
           allOf: [
             {
               anyOf: [
@@ -524,7 +524,7 @@ describe('module', function() {
       }).to.throw(/incompatible/)
 
       expect(function() {
-        simplifier({
+        merger({
           allOf: [
             {
               anyOf: [
@@ -545,7 +545,7 @@ describe('module', function() {
     })
 
     it('merges more complex oneOf', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             oneOf: [
@@ -597,7 +597,7 @@ describe('module', function() {
     })
 
     it('merges nested allOf if inside singular oneOf', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             type: [
@@ -632,7 +632,7 @@ describe('module', function() {
     })
 
     it('merges nested allOf if inside multiple oneOf', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             type: [
@@ -679,7 +679,7 @@ describe('module', function() {
 
     it.skip('throws if no compatible when merging oneOf', function() {
       expect(function() {
-        simplifier({allOf: [
+        merger({allOf: [
           {}, {
             oneOf: [
               {
@@ -697,7 +697,7 @@ describe('module', function() {
       }).to.throw(/incompatible/)
 
       expect(function() {
-        simplifier({allOf: [
+        merger({allOf: [
           {}, {
             oneOf: [
               {
@@ -723,7 +723,7 @@ describe('module', function() {
 
     // not ready to implement this yet
     it.skip('merges singular oneOf', function() {
-      var result = simplifier({
+      var result = merger({
         properties: {
           name: {
             type: 'string'
@@ -778,7 +778,7 @@ describe('module', function() {
     })
 
     it('merges not using allOf', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             not: {
@@ -823,7 +823,7 @@ describe('module', function() {
     })
 
     it('merges contains using allOf', function() {
-      var result = simplifier({allOf: [
+      var result = merger({allOf: [
         {}, {
           contains: {
             properties: {
@@ -864,7 +864,7 @@ describe('module', function() {
     })
 
     it('merges additionalItems', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             additionalItems: {
@@ -907,7 +907,7 @@ describe('module', function() {
     })
 
     it('merges pattern using allOf', function() {
-      var result = simplifier({allOf: [
+      var result = merger({allOf: [
         {}, {
           pattern: 'fdsaf'
         }, {
@@ -925,7 +925,7 @@ describe('module', function() {
         ]
       })
 
-      var result2 = simplifier({
+      var result2 = merger({
         allOf: [
           {
             pattern: 'abba'
@@ -939,7 +939,7 @@ describe('module', function() {
     it('extracts pattern from anyOf and oneOf using | operator in regexp')
 
     it.skip('merges multipleOf using allOf or direct assignment', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             title: 'foo',
@@ -966,7 +966,7 @@ describe('module', function() {
         ]
       })
 
-      var result2 = simplifier({
+      var result2 = merger({
         allOf: [
           {
             multipleOf: 1
@@ -978,7 +978,7 @@ describe('module', function() {
     })
 
     it('merges multipleOf by finding common lowest number', function() {
-      var result = simplifier({allOf: [
+      var result = merger({allOf: [
         {}, {
           multipleOf: 0.2,
           allOf: [
@@ -1018,7 +1018,7 @@ describe('module', function() {
 
       expect(result).to.eql({multipleOf: 6})
 
-      expect(simplifier({
+      expect(merger({
         allOf: [
           {
             multipleOf: 4
@@ -1030,7 +1030,7 @@ describe('module', function() {
         ]
       })).to.eql({multipleOf: 60})
 
-      expect(simplifier({
+      expect(merger({
         allOf: [
           {
             multipleOf: 0.3
@@ -1042,7 +1042,7 @@ describe('module', function() {
         ]
       })).to.eql({multipleOf: 21})
 
-      expect(simplifier({
+      expect(merger({
         allOf: [
           {
             multipleOf: 0.5
@@ -1052,7 +1052,7 @@ describe('module', function() {
         ]
       })).to.eql({multipleOf: 2})
 
-      expect(simplifier({
+      expect(merger({
         allOf: [
           {
             multipleOf: 0.3
@@ -1064,7 +1064,7 @@ describe('module', function() {
         ]
       })).to.eql({multipleOf: 3})
 
-      expect(simplifier({
+      expect(merger({
         allOf: [
           {
             multipleOf: 0.3
@@ -1076,7 +1076,7 @@ describe('module', function() {
         ]
       })).to.eql({multipleOf: 21})
 
-      expect(simplifier({
+      expect(merger({
         allOf: [
           {
             multipleOf: 0.4
@@ -1088,7 +1088,7 @@ describe('module', function() {
         ]
       })).to.eql({multipleOf: 42})
 
-      expect(simplifier({
+      expect(merger({
         allOf: [
           {
             multipleOf: 0.2
@@ -1100,7 +1100,7 @@ describe('module', function() {
         ]
       })).to.eql({multipleOf: 13})
 
-      expect(simplifier({
+      expect(merger({
         allOf: [
           {
             multipleOf: 100000
@@ -1114,7 +1114,7 @@ describe('module', function() {
     })
 
     it.skip('merges multipleOf using allOf', function() {
-      var result = simplifier({allOf: [
+      var result = merger({allOf: [
         {}, {
           multipleOf: 10
         }, {
@@ -1132,7 +1132,7 @@ describe('module', function() {
         ]
       })
 
-      var result2 = simplifier({
+      var result2 = merger({
         allOf: [
           {
             multipleOf: 10
@@ -1146,7 +1146,7 @@ describe('module', function() {
 
   describe('merging arrays', function() {
     it('merges required object', function() {
-      expect(simplifier({
+      expect(merger({
         required: ['prop2'],
         allOf: [
           {
@@ -1159,7 +1159,7 @@ describe('module', function() {
     })
 
     it('merges default value', function() {
-      expect(simplifier({
+      expect(merger({
         default: [
           'prop2', {
             prop1: 'foo'
@@ -1180,7 +1180,7 @@ describe('module', function() {
     })
 
     it('merges default value', function() {
-      expect(simplifier({
+      expect(merger({
         default: {
           foo: 'bar'
         },
@@ -1199,7 +1199,7 @@ describe('module', function() {
 
   describe('merging objects', function() {
     it('merges child objects', function() {
-      expect(simplifier({
+      expect(merger({
         properties: {
           name: {
             title: 'Name',
@@ -1239,7 +1239,7 @@ describe('module', function() {
     })
 
     it('merges boolean schemas', function() {
-      expect(simplifier({
+      expect(merger({
         properties: {
           name: true
         },
@@ -1276,7 +1276,7 @@ describe('module', function() {
         }
       })
 
-      expect(simplifier({
+      expect(merger({
         properties: {
           name: false
         },
@@ -1306,11 +1306,11 @@ describe('module', function() {
         }
       })
 
-      expect(simplifier({
+      expect(merger({
         allOf: [true, false]
       })).to.eql(false)
 
-      expect(simplifier({
+      expect(merger({
         properties: {
           name: true
         },
@@ -1339,7 +1339,7 @@ describe('module', function() {
     })
 
     it('merges all allOf', function() {
-      expect(simplifier({
+      expect(merger({
         properties: {
           name: {
             allOf: [
@@ -1468,7 +1468,7 @@ describe('module', function() {
 
       expected.person.properties.child = expected.person
 
-      var result = simplifier(schema)
+      var result = merger(schema)
 
       expect(result).to.eql({properties: expected})
     })
@@ -1532,7 +1532,7 @@ describe('module', function() {
 
         expected.person.properties.child = expected.person
 
-        var result = simplifier(schema)
+        var result = merger(schema)
 
         expect(result).to.eql({properties: expected, definitions: expected})
 
@@ -1546,7 +1546,7 @@ describe('module', function() {
 
   describe('dependencies', function() {
     it('merges simliar schemas', function() {
-      var result = simplifier({
+      var result = merger({
         dependencies: {
           'foo': {
             type: [
@@ -1595,7 +1595,7 @@ describe('module', function() {
 
   describe('propertyNames', function() {
     it('merges simliar schemas', function() {
-      var result = simplifier({
+      var result = merger({
         propertyNames: {
           type: 'string',
           allOf: [
@@ -1633,7 +1633,7 @@ describe('module', function() {
   describe('items', function() {
     describe('when single schema', function() {
       it('merges them', function() {
-        var result = simplifier({
+        var result = merger({
           items: {
             type: 'string',
             allOf: [
@@ -1670,7 +1670,7 @@ describe('module', function() {
 
     describe('when array', function() {
       it('merges them if possible', function() {
-        var result = simplifier({
+        var result = merger({
           items: [
             {
               type: 'string',

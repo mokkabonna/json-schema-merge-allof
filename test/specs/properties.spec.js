@@ -1,5 +1,5 @@
 var chai = require('chai')
-var simplifier = require('../../src')
+var merger = require('../../src')
 var sinon = require('sinon')
 var expect = chai.expect
 var Ajv = require('ajv')
@@ -17,7 +17,7 @@ describe('properties', function() {
         }
       })
 
-      simplifier({
+      merger({
         allOf: [
           {
             properties: {
@@ -47,7 +47,7 @@ describe('properties', function() {
 
   describe('additionalProperties', function() {
     it('allows no extra properties if additionalProperties is false', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             additionalProperties: true
@@ -61,7 +61,7 @@ describe('properties', function() {
     })
 
     it('allows only intersecting properties', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             properties: {
@@ -86,7 +86,7 @@ describe('properties', function() {
     })
 
     it('allows intersecting patternproperties', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             properties: {
@@ -119,7 +119,7 @@ describe('properties', function() {
     })
 
     it('disallows all except patternProperties if both false', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             properties: {
@@ -151,7 +151,7 @@ describe('properties', function() {
     })
 
     it('disallows all if no patternProperties and if both false', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             properties: {
@@ -174,7 +174,7 @@ describe('properties', function() {
     })
 
     it('allows otherwise incompatible properties if option ignoreAdditionalProperties is true', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             properties: {
@@ -198,7 +198,7 @@ describe('properties', function() {
         additionalProperties: false
       })
 
-      var result2 = simplifier({
+      var result2 = merger({
         allOf: [
           {
             additionalProperties: true
@@ -212,7 +212,7 @@ describe('properties', function() {
     })
 
     it('applies additionalProperties to other schemas properties if they have any', function() {
-      var result = simplifier({
+      var result = merger({
         properties: {
           common: true,
           root: true
@@ -274,7 +274,7 @@ describe('properties', function() {
     })
 
     it('considers patternProperties before merging additionalProperties to other schemas properties if they have any', function() {
-      var result = simplifier({
+      var result = merger({
         properties: {
           common: true,
           root: true
@@ -365,7 +365,7 @@ describe('properties', function() {
     })
 
     it('combines additionalProperties when schemas', function() {
-      var result = simplifier({
+      var result = merger({
         additionalProperties: true,
         allOf: [
           {
@@ -399,7 +399,7 @@ describe('properties', function() {
 
   describe('patternProperties', function() {
     it('merges simliar schemas', function() {
-      var result = simplifier({
+      var result = merger({
         patternProperties: {
           '^\\$.+': {
             type: [
@@ -451,7 +451,7 @@ describe('properties', function() {
 
   describe('when patternProperties present', function() {
     it('merges patternproperties', function() {
-      var result = simplifier({
+      var result = merger({
         allOf: [
           {
             patternProperties: {
@@ -514,7 +514,7 @@ describe('properties', function() {
         ]
       }
 
-      var result = simplifier(schema)
+      var result = merger(schema)
 
       expect(result).to.eql({
         properties: {

@@ -368,7 +368,7 @@ defaultResolvers.additionalProperties = schemaResolver
 defaultResolvers.propertyNames = schemaResolver
 defaultResolvers.definitions = defaultResolvers.dependencies
 
-function simplifier(rootSchema, options, totalSchemas) {
+function merger(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
   var ajv = new Ajv()
   options = defaults(options, {
@@ -399,7 +399,7 @@ function simplifier(rootSchema, options, totalSchemas) {
     var allKeys = uniq(flattenDeep(schemas.map(keys)))
 
     if (contains(allKeys, 'allOf')) {
-      return simplifier({
+      return merger({
         allOf: schemas
       }, options, totalSchemas)
     }
@@ -492,4 +492,4 @@ function simplifier(rootSchema, options, totalSchemas) {
   return merged
 }
 
-module.exports = simplifier
+module.exports = merger

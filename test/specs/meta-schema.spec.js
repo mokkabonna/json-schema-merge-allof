@@ -1,5 +1,5 @@
 var chai = require('chai')
-var simplifier = require('../../src')
+var merger = require('../../src')
 var _ = require('lodash')
 var $RefParser = require('json-schema-ref-parser')
 var metaSchema = require('../fixtures/schemas/meta-schema-v6.json')
@@ -14,7 +14,7 @@ describe.skip('simplify the meta schema', function() {
   })
 
   it('simplifies', function() {
-    var result = simplifier(_.cloneDeep(schema))
+    var result = merger(_.cloneDeep(schema))
     expect(result).to.eql(schema)
   })
 })

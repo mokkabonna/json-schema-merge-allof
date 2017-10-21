@@ -1,4 +1,4 @@
-# json-schema-simplify
+# json-schema-merge-allof [![Build Status](https://travis-ci.org/mokkabonna/json-shcema-merge-allof.svg?branch=master)](https://travis-ci.org/mokkabonna/json-shcema-merge-allof) [![Coverage Status](https://coveralls.io/repos/github/mokkabonna/json-shcema-merge-allof/badge.svg?branch=master)](https://coveralls.io/github/mokkabonna/json-shcema-merge-allof?branch=master)
 
 ## Features
 
@@ -87,7 +87,7 @@ When multiple conflicting **not** values are found, we also use the approach tha
 Override any default resolver like this:
 
 ```js
-simplify(schema, {
+mergeAllOf(schema, {
   resolvers: {
     title: function(values, key, mergeSchemas) {
       // choose what title you want to be used based on the conflicting values
