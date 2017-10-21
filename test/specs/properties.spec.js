@@ -1,6 +1,7 @@
 var chai = require('chai')
 var merger = require('../../src')
 var sinon = require('sinon')
+var _ = require('lodash')
 var expect = chai.expect
 var Ajv = require('ajv')
 
@@ -112,7 +113,7 @@ describe('properties', function() {
       })
     })
 
-    it('disallows all except patternProperties if both false', function() {
+    it('disallows all except matching patternProperties if both false', function() {
       var result = merger({
         allOf: [{
           properties: {
@@ -135,10 +136,223 @@ describe('properties', function() {
         properties: {
           foo123: true
         },
+        additionalProperties: false
+      })
+    })
+
+    it('disallows all except matching patternProperties if both false', function() {
+      var result = merger({
+        allOf: [{
+          properties: {
+            foo: true,
+            foo123: true
+          },
+          patternProperties: {
+            '.+\\d+$': {
+              type: 'string'
+            }
+          },
+          additionalProperties: false
+        }, {
+          properties: {
+            bar: true,
+            bar123: true
+          },
+          patternProperties: {
+            '.+\\d+$': true
+          },
+          additionalProperties: false
+        }]
+      })
+
+      expect(result).to.eql({
+        properties: {
+          foo123: true,
+          bar123: true
+        },
+        patternProperties: {
+          '.+\\d+$': {
+            type: 'string'
+          }
+        },
+        additionalProperties: false
+      })
+    })
+
+    it('disallows all except matching patternProperties if both false', function() {
+      var schema = {
+        allOf: [{
+          properties: {
+            foo: true,
+            foo123: true
+          },
+          patternProperties: {
+            '^bar': true
+          },
+          additionalProperties: false
+        }, {
+          properties: {
+            bar: true,
+            bar123: true
+          },
+          patternProperties: {
+            '.+\\d+$': true
+          },
+          additionalProperties: false
+        }]
+      }
+      var origSchema = _.cloneDeep(schema)
+      var result = merger(schema)
+      expect(result).not.to.eql(origSchema)
+
+      expect(result).to.eql({
+        properties: {
+          bar: true,
+          foo123: true,
+          bar123: true
+        },
+        additionalProperties: false
+      })
+
+      ;
+      [{
+        foo123: 'testfdsdfsfd'
+      }, {
+        bar123: 'testfdsdfsfd'
+      }, {
+        foo123: 'testfdsdfsfd'
+      }, {
+        bar: 'fdsaf'
+      }, {
+        abc123: 'fdsaf'
+      }, {
+        bar123: 'fdsaf'
+      }, {
+        barabc: 'fdsaf'
+      }, {
+        // additionalProp
+        foo234: 'testffdsafdsads'
+      }].forEach(function(val) {
+        validateInputOutput(origSchema, result, val)
+      })
+    })
+
+    it('disallows all except matching patternProperties if both true', function() {
+      var schema = {
+        allOf: [{
+          properties: {
+            foo: true,
+            foo123: true
+          },
+          patternProperties: {
+            '^bar': true
+          }
+        }, {
+          properties: {
+            bar: true,
+            bar123: true
+          },
+          patternProperties: {
+            '.+\\d+$': true
+          }
+        }]
+      }
+      var origSchema = _.cloneDeep(schema)
+      var result = merger(schema)
+      expect(result).not.to.eql(origSchema)
+
+      expect(result).to.eql({
+        properties: {
+          foo: true,
+          bar: true,
+          foo123: true,
+          bar123: true
+        },
+        patternProperties: {
+          '^bar': true,
+          '.+\\d+$': true
+        }
+      })
+
+      ;
+      [{
+        foo123: 'testfdsdfsfd'
+      }, {
+        bar123: 'testfdsdfsfd'
+      }, {
+        foo123: 'testfdsdfsfd'
+      }, {
+        foo: 'fdsaf'
+      }, {
+        bar: 'fdsaf'
+      }, {
+        abc123: 'fdsaf'
+      }, {
+        bar123: 'fdsaf'
+      }, {
+        barabc: 'fdsaf'
+      }, {
+        foo234: 'testffdsafdsads'
+      }].forEach(function(val) {
+        validateInputOutput(origSchema, result, val)
+      })
+    })
+
+    it('disallows all except matching patternProperties if one false', function() {
+      var schema = {
+        allOf: [{
+          properties: {
+            foo: true,
+            foo123: true
+          }
+        }, {
+          properties: {
+            bar: true,
+            bar123: true
+          },
+          patternProperties: {
+            '.+\\d+$': true
+          },
+          additionalProperties: false
+        }]
+      }
+      var origSchema = _.cloneDeep(schema)
+      var result = merger(schema)
+      expect(result).not.to.eql(origSchema)
+
+      expect(result).to.eql({
+        properties: {
+          bar: true,
+          foo123: true,
+          bar123: true
+        },
         patternProperties: {
           '.+\\d+$': true
         },
         additionalProperties: false
+      })
+
+      ;
+      [{
+        foo123: 'testfdsdfsfd'
+      }, {
+        bar123: 'testfdsdfsfd'
+      }, {
+        foo123: 'testfdsdfsfd'
+      }, {
+        foo: 'fdsaf'
+      }, {
+        bar: 'fdsaf'
+      }, {
+        abc123: 'fdsaf'
+      }, {
+        bar123: 'fdsaf'
+      }, {
+        barabc: 'fdsaf'
+      }, {
+        foo234: 'testffdsafdsads'
+      }].forEach(function(val) {
+        validateInputOutput(origSchema, result, val)
       })
     })
 
@@ -450,7 +664,10 @@ describe('properties', function() {
         }]
       }
 
+      var origSchema = _.cloneDeep(schema)
       var result = merger(schema)
+
+      expect(result).not.to.eql(origSchema)
 
       expect(result).to.eql({
         properties: {
@@ -488,10 +705,8 @@ describe('properties', function() {
       }, {
         name: 'test',
         name2: 'testffdsafdsads'
-      }].forEach(function() {
-        validateInputOutput(schema, result, {
-          name: 'test'
-        })
+      }].forEach(function(val) {
+        validateInputOutput(schema, result, val)
       })
     })
   })

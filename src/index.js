@@ -159,7 +159,8 @@ var defaultResolvers = {
       values.forEach(function(subSchema) {
         var otherSubSchemas = values.filter(s => s !== subSchema)
         var ownKeys = keys(subSchema.properties)
-        var ownPatterns = keys(subSchema.patternProperties).map(k => new RegExp(k))
+        var ownPatternKeys = keys(subSchema.patternProperties)
+        var ownPatterns = ownPatternKeys.map(k => new RegExp(k))
         if (subSchema.additionalProperties === false) {
           otherSubSchemas.forEach(function(other) {
             var allOtherKeys = keys(other.properties)
@@ -170,6 +171,19 @@ var defaultResolvers = {
         }
       })
     }
+
+    // remove disallowed patternProperties
+    values.forEach(function(subSchema) {
+      var otherSubSchemas = values.filter(s => s !== subSchema)
+      var ownPatternKeys = keys(subSchema.patternProperties)
+      if (subSchema.additionalProperties === false) {
+        otherSubSchemas.forEach(function(other) {
+          var allOtherPatterns = keys(other.patternProperties)
+          var additionalPatternKeys = withoutArr(allOtherPatterns, ownPatternKeys)
+          additionalPatternKeys.forEach(key => delete other.patternProperties[key])
+        })
+      }
+    })
 
     // then merge the permitted ones
     values.forEach(function(subSchema) {
