@@ -15,7 +15,8 @@ npm install json-schema-compare --save
 - Validates in a way not possible by regular simple meta validators
 - Pluggable keyword resolvers
 - Option to override common impossibility like adding properties when using **additionalProperties: false**
-- Supports all json schema keywords
+
+NOT 100% supported yet for resolving items when array and additionalItems present.
 
 ## How
 
