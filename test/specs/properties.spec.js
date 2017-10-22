@@ -706,7 +706,7 @@ describe('properties', function() {
         name: 'test',
         name2: 'testffdsafdsads'
       }].forEach(function(val) {
-        validateInputOutput(schema, result, val)
+        validateInputOutput(origSchema, result, val)
       })
     })
   })

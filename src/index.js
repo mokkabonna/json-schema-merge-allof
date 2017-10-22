@@ -410,10 +410,8 @@ function merger(rootSchema, options, totalSchemas) {
     resolvers: defaultResolvers
   })
 
-  function mergeSchemas(schemas, base) {
+  function mergeSchemas(schemas) {
     schemas = cloneDeep(schemas.filter(notUndefined))
-    var merged = isPlainObject(base)
-      ? base : {}
 
     // return undefined, an empty schema
     if (!schemas.length) {
@@ -431,6 +429,7 @@ function merger(rootSchema, options, totalSchemas) {
     // there are no false and we don't need the true ones as they accept everything
     schemas = schemas.filter(isPlainObject)
 
+    var merged = schemas[0]
     var allKeys = allUniqueKeys(schemas)
 
     if (contains(allKeys, 'allOf')) {
@@ -455,7 +454,7 @@ function merger(rootSchema, options, totalSchemas) {
       // allOf is treated differently alltogether
       if (compacted.length === 1 && contains(schemaArrays, key)) {
         merged[key] = compacted[0].map(function(schema) {
-          return mergeSchemas([schema], schema)
+          return mergeSchemas([schema])
         })
         // prop groups must always be resolved
       } else if (compacted.length === 1 && !contains(schemaGroupProps, key) && !contains(schemaProps, key)) {
@@ -488,9 +487,9 @@ function merger(rootSchema, options, totalSchemas) {
     return merged
   }
 
-  var allSchemas = flattenDeep(getAllOf(rootSchema))
-  var merged = mergeSchemas(allSchemas, rootSchema)
-
+  var copy = cloneDeep(rootSchema)
+  var allSchemas = flattenDeep(getAllOf(copy))
+  var merged = mergeSchemas(allSchemas)
   return merged
 }
 

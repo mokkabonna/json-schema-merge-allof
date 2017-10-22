@@ -1,6 +1,7 @@
 var chai = require('chai')
 var mergerModule = require('../../src')
 var Ajv = require('ajv')
+var _ = require('lodash')
 var $RefParser = require('json-schema-ref-parser')
 
 var expect = chai.expect
@@ -21,22 +22,53 @@ function merger(schema, options) {
 }
 
 describe('module', function() {
+  it('does not mutate original schema', function() {
+    var schema = {
+      allOf: [
+        {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string'
+            }
+          }
+        }, {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+              minLength: 5
+            }
+          }
+        }
+      ]
+    }
+    var origSchema = _.cloneDeep(schema)
+    var result = merger(schema)
+
+    expect(origSchema).to.eql(schema)
+    expect(result === schema).to.equal(false)
+    expect(result === schema.allOf[0]).to.equal(false)
+    expect(result.properties === schema.allOf[0].properties).to.equal(false)
+    expect(result.properties.name === schema.allOf[0].properties.name).to.equal(false)
+    expect(result === schema.allOf[1]).to.equal(false)
+    expect(result.properties === schema.allOf[1].properties).to.equal(false)
+    expect(result.properties.name === schema.allOf[1].properties.name).to.equal(false)
+  })
   it('combines simple usecase', function() {
     var result = merger({
-      allOf: [{
-        type: 'string',
-        minLength: 1
-      }, {
-        type: 'string',
-        maxLength: 5
-      }]
+      allOf: [
+        {
+          type: 'string',
+          minLength: 1
+        }, {
+          type: 'string',
+          maxLength: 5
+        }
+      ]
     })
 
-    expect(result).to.eql({
-      type: 'string',
-      minLength: 1,
-      maxLength: 5
-    })
+    expect(result).to.eql({type: 'string', minLength: 1, maxLength: 5})
   })
 
   it('combines without allOf', function() {
@@ -61,221 +93,223 @@ describe('module', function() {
     it('merges with default resolver if not defined resolver', function() {
       var result = merger({
         title: 'schema1',
-        allOf: [{
-          title: 'schema2'
-        }, {
-          title: 'schema3'
-        }]
+        allOf: [
+          {
+            title: 'schema2'
+          }, {
+            title: 'schema3'
+          }
+        ]
       })
 
-      expect(result).to.eql({
-        title: 'schema1'
-      })
+      expect(result).to.eql({title: 'schema1'})
 
       var result3 = merger({
-        allOf: [{
-          title: 'schema2'
-        }, {
-          title: 'schema3'
-        }]
+        allOf: [
+          {
+            title: 'schema2'
+          }, {
+            title: 'schema3'
+          }
+        ]
       })
 
-      expect(result3).to.eql({
-        title: 'schema2'
-      })
+      expect(result3).to.eql({title: 'schema2'})
     })
 
     it('merges minLength if conflict', function() {
       var result = merger({
-        allOf: [{
-          minLength: 1
-        }, {
-          minLength: 5
-        }]
+        allOf: [
+          {
+            minLength: 1
+          }, {
+            minLength: 5
+          }
+        ]
       })
 
-      expect(result).to.eql({
-        minLength: 5
-      })
+      expect(result).to.eql({minLength: 5})
     })
 
     it('merges minimum if conflict', function() {
       var result = merger({
-        allOf: [{
-          minimum: 1
-        }, {
-          minimum: 5
-        }]
+        allOf: [
+          {
+            minimum: 1
+          }, {
+            minimum: 5
+          }
+        ]
       })
 
-      expect(result).to.eql({
-        minimum: 5
-      })
+      expect(result).to.eql({minimum: 5})
     })
 
     it('merges exclusiveMinimum if conflict', function() {
       var result = merger({
-        allOf: [{
-          exclusiveMinimum: 1
-        }, {
-          exclusiveMinimum: 5
-        }]
+        allOf: [
+          {
+            exclusiveMinimum: 1
+          }, {
+            exclusiveMinimum: 5
+          }
+        ]
       })
 
-      expect(result).to.eql({
-        exclusiveMinimum: 5
-      })
+      expect(result).to.eql({exclusiveMinimum: 5})
     })
 
     it('merges minItems if conflict', function() {
       var result = merger({
-        allOf: [{
-          minItems: 1
-        }, {
-          minItems: 5
-        }]
+        allOf: [
+          {
+            minItems: 1
+          }, {
+            minItems: 5
+          }
+        ]
       })
 
-      expect(result).to.eql({
-        minItems: 5
-      })
+      expect(result).to.eql({minItems: 5})
     })
 
     it('merges maximum if conflict', function() {
       var result = merger({
-        allOf: [{
-          maximum: 1
-        }, {
-          maximum: 5
-        }]
+        allOf: [
+          {
+            maximum: 1
+          }, {
+            maximum: 5
+          }
+        ]
       })
 
-      expect(result).to.eql({
-        maximum: 1
-      })
+      expect(result).to.eql({maximum: 1})
     })
 
     it('merges exclusiveMaximum if conflict', function() {
       var result = merger({
-        allOf: [{
-          exclusiveMaximum: 1
-        }, {
-          exclusiveMaximum: 5
-        }]
+        allOf: [
+          {
+            exclusiveMaximum: 1
+          }, {
+            exclusiveMaximum: 5
+          }
+        ]
       })
 
-      expect(result).to.eql({
-        exclusiveMaximum: 1
-      })
+      expect(result).to.eql({exclusiveMaximum: 1})
     })
 
     it('merges maxItems if conflict', function() {
       var result = merger({
-        allOf: [{
-          maxItems: 1
-        }, {
-          maxItems: 5
-        }]
+        allOf: [
+          {
+            maxItems: 1
+          }, {
+            maxItems: 5
+          }
+        ]
       })
 
-      expect(result).to.eql({
-        maxItems: 1
-      })
+      expect(result).to.eql({maxItems: 1})
     })
 
     it('merges maxLength if conflict', function() {
       var result = merger({
-        allOf: [{
-          maxLength: 4
-        }, {
-          maxLength: 5
-        }]
+        allOf: [
+          {
+            maxLength: 4
+          }, {
+            maxLength: 5
+          }
+        ]
       })
 
-      expect(result).to.eql({
-        maxLength: 4
-      })
+      expect(result).to.eql({maxLength: 4})
     })
 
     it('merges uniqueItems to most restrictive if conflict', function() {
       var result = merger({
-        allOf: [{
-          uniqueItems: true
-        }, {
-          uniqueItems: false
-        }]
+        allOf: [
+          {
+            uniqueItems: true
+          }, {
+            uniqueItems: false
+          }
+        ]
       })
 
-      expect(result).to.eql({
-        uniqueItems: true
-      })
+      expect(result).to.eql({uniqueItems: true})
 
       expect(merger({
-        allOf: [{
-          uniqueItems: false
-        }, {
-          uniqueItems: false
-        }]
-      })).to.eql({
-        uniqueItems: false
-      })
+        allOf: [
+          {
+            uniqueItems: false
+          }, {
+            uniqueItems: false
+          }
+        ]
+      })).to.eql({uniqueItems: false})
     })
 
     it('throws if merging incompatible type', function() {
       expect(function() {
         merger({
-          allOf: [{
-            type: 'null'
-          }, {
-            type: 'text'
-          }]
+          allOf: [
+            {
+              type: 'null'
+            }, {
+              type: 'text'
+            }
+          ]
         })
       }).to.throw(/incompatible/)
     })
 
     it('merges type if conflict', function() {
-      var result = merger({
-        allOf: [{}, {
+      var result = merger({allOf: [
+        {}, {
           type: ['string', 'null', 'object', 'array']
         }, {
           type: ['string', 'null']
         }, {
           type: ['null', 'string']
-        }]
-      })
+        }
+      ]})
 
       expect(result).to.eql({
         type: ['string', 'null']
       })
 
-      var result2 = merger({
-        allOf: [{}, {
+      var result2 = merger({allOf: [
+        {}, {
           type: ['string', 'null', 'object', 'array']
         }, {
           type: 'string'
         }, {
           type: ['null', 'string']
-        }]
-      })
+        }
+      ]})
 
-      expect(result2).to.eql({
-        type: 'string'
-      })
+      expect(result2).to.eql({type: 'string'})
 
       expect(function() {
         merger({
-          allOf: [{
-            type: ['null']
-          }, {
-            type: ['text', 'object']
-          }]
+          allOf: [
+            {
+              type: ['null']
+            }, {
+              type: ['text', 'object']
+            }
+          ]
         })
       }).to.throw(/incompatible/)
     })
 
     it('merges enum', function() {
-      var result = merger({
-        allOf: [{}, {
+      var result = merger({allOf: [
+        {}, {
           enum: [
             'string',
             'null',
@@ -286,9 +320,7 @@ describe('module', function() {
             null
           ]
         }, {
-          enum: ['string', {},
-            [1],
-            [1]
+          enum: ['string', {}, [1], [1]
           ]
         }, {
           enum: [
@@ -299,48 +331,44 @@ describe('module', function() {
             [1],
             null
           ]
-        }]
-      })
+        }
+      ]})
 
       expect(result).to.eql({
-        enum: [
-          [1], {}, 'string'
-        ]
+        enum: [[1], {}, 'string']
       })
     })
 
     it('throws if enum is incompatible', function() {
       expect(function() {
-        merger({
-          allOf: [{}, {
+        merger({allOf: [
+          {}, {
             enum: ['string', {}]
           }, {
             enum: [{}, 'string']
-          }]
-        })
+          }
+        ]})
       }).not.to.throw(/incompatible/)
 
       expect(function() {
-        merger({
-          allOf: [{}, {
+        merger({allOf: [
+          {}, {
             enum: ['string', {}]
           }, {
-            enum: [
-              [], false
-            ]
-          }]
-        })
+            enum: [[], false]
+          }
+        ]})
       }).to.throw(/incompatible/)
     })
 
     it('merges const', function() {
-      var result = merger({
-        allOf: [{}, {
+      var result = merger({allOf: [
+        {}, {
           const: ['string', {}]
         }, {
           const: ['string', {}]
-        }]
-      })
+        }
+      ]})
 
       expect(result).to.eql({
         const: ['string', {}]
@@ -349,80 +377,102 @@ describe('module', function() {
 
     it('merges anyOf', function() {
       var result = merger({
-        allOf: [{
-          anyOf: [{
-            required: ['123']
-          }]
-        }, {
-          anyOf: [{
-            required: ['123']
+        allOf: [
+          {
+            anyOf: [
+              {
+                required: ['123']
+              }
+            ]
           }, {
-            required: ['456']
-          }]
-        }]
+            anyOf: [
+              {
+                required: ['123']
+              }, {
+                required: ['456']
+              }
+            ]
+          }
+        ]
       })
 
       expect(result).to.eql({
-        anyOf: [{
-          required: ['123']
-        }, {
-          required: ['123', '456']
-        }]
+        anyOf: [
+          {
+            required: ['123']
+          }, {
+            required: ['123', '456']
+          }
+        ]
       })
     })
 
     it('merges anyOf by finding valid combinations', function() {
       var result = merger({
-        allOf: [{
-          anyOf: [{
-            type: ['null', 'string', 'array']
+        allOf: [
+          {
+            anyOf: [
+              {
+                type: ['null', 'string', 'array']
+              }, {
+                type: ['null', 'string', 'object']
+              }
+            ]
           }, {
-            type: ['null', 'string', 'object']
-          }]
-        }, {
-          anyOf: [{
-            type: ['null', 'string']
-          }, {
-            type: ['integer', 'object', 'null']
-          }]
-        }]
+            anyOf: [
+              {
+                type: ['null', 'string']
+              }, {
+                type: ['integer', 'object', 'null']
+              }
+            ]
+          }
+        ]
       })
 
       expect(result).to.eql({
-        anyOf: [{
-          type: ['null', 'string']
-        }, {
-          type: 'null'
-        }, {
-          type: ['object', 'null']
-        }]
+        anyOf: [
+          {
+            type: ['null', 'string']
+          }, {
+            type: 'null'
+          }, {
+            type: ['object', 'null']
+          }
+        ]
       })
     })
 
     it.skip('extracts common logic', function() {
       var result = merger({
-        allOf: [{
-          anyOf: [{
-            type: [
-              'null', 'string', 'array'
-            ],
-            minLength: 5
+        allOf: [
+          {
+            anyOf: [
+              {
+                type: [
+                  'null', 'string', 'array'
+                ],
+                minLength: 5
+              }, {
+                type: [
+                  'null', 'string', 'object'
+                ],
+                minLength: 5
+              }
+            ]
           }, {
-            type: [
-              'null', 'string', 'object'
-            ],
-            minLength: 5
-          }]
-        }, {
-          anyOf: [{
-            type: [
-              'null', 'string'
-            ],
-            minLength: 5
-          }, {
-            type: ['integer', 'object', 'null']
-          }]
-        }]
+            anyOf: [
+              {
+                type: [
+                  'null', 'string'
+                ],
+                minLength: 5
+              }, {
+                type: ['integer', 'object', 'null']
+              }
+            ]
+          }
+        ]
       })
 
       // TODO I think this is correct
@@ -430,26 +480,34 @@ describe('module', function() {
       expect(result).to.eql({
         type: 'null',
         minLength: 5,
-        anyOf: [{
-          type: 'string'
-        }]
+        anyOf: [
+          {
+            type: 'string'
+          }
+        ]
       })
     })
 
     it.skip('merges anyOf into main schema if left with only one combination', function() {
       var result = merger({
         required: ['abc'],
-        allOf: [{
-          anyOf: [{
-            required: ['123']
+        allOf: [
+          {
+            anyOf: [
+              {
+                required: ['123']
+              }, {
+                required: ['456']
+              }
+            ]
           }, {
-            required: ['456']
-          }]
-        }, {
-          anyOf: [{
-            required: ['123']
-          }]
-        }]
+            anyOf: [
+              {
+                required: ['123']
+              }
+            ]
+          }
+        ]
       })
 
       expect(result).to.eql({
@@ -459,201 +517,257 @@ describe('module', function() {
 
     it('merges nested allOf if inside singular anyOf', function() {
       var result = merger({
-        allOf: [{
-          anyOf: [{
-            required: ['123'],
-            allOf: [{
-              required: ['768']
-            }]
-          }]
-        }, {
-          anyOf: [{
-            required: ['123']
+        allOf: [
+          {
+            anyOf: [
+              {
+                required: ['123'],
+                allOf: [
+                  {
+                    required: ['768']
+                  }
+                ]
+              }
+            ]
           }, {
-            required: ['456']
-          }]
-        }]
+            anyOf: [
+              {
+                required: ['123']
+              }, {
+                required: ['456']
+              }
+            ]
+          }
+        ]
       })
 
       expect(result).to.eql({
-        anyOf: [{
-          required: ['123', '768']
-        }, {
-          required: ['123', '456', '768']
-        }]
+        anyOf: [
+          {
+            required: ['123', '768']
+          }, {
+            required: ['123', '456', '768']
+          }
+        ]
       })
     })
 
     it('throws if no intersection at all', function() {
       expect(function() {
         merger({
-          allOf: [{
-            anyOf: [{
-              type: ['object', 'string', 'null']
-            }]
-          }, {
-            anyOf: [{
-              type: ['array', 'integer']
-            }]
-          }]
+          allOf: [
+            {
+              anyOf: [
+                {
+                  type: ['object', 'string', 'null']
+                }
+              ]
+            }, {
+              anyOf: [
+                {
+                  type: ['array', 'integer']
+                }
+              ]
+            }
+          ]
         })
       }).to.throw(/incompatible/)
 
       expect(function() {
         merger({
-          allOf: [{
-            anyOf: [{
-              type: ['object', 'string', 'null']
-            }]
-          }, {
-            anyOf: [{
-              type: ['array', 'integer']
-            }]
-          }]
+          allOf: [
+            {
+              anyOf: [
+                {
+                  type: ['object', 'string', 'null']
+                }
+              ]
+            }, {
+              anyOf: [
+                {
+                  type: ['array', 'integer']
+                }
+              ]
+            }
+          ]
         })
       }).to.throw(/incompatible/)
     })
 
     it('merges more complex oneOf', function() {
       var result = merger({
-        allOf: [{
-          oneOf: [{
-            type: [
-              'array', 'string', 'object'
-            ],
-            required: ['123']
+        allOf: [
+          {
+            oneOf: [
+              {
+                type: [
+                  'array', 'string', 'object'
+                ],
+                required: ['123']
+              }, {
+                required: ['abc']
+              }
+            ]
           }, {
-            required: ['abc']
-          }]
-        }, {
-          oneOf: [{
-            type: ['string']
-          }, {
-            type: [
-              'object', 'array'
-            ],
-            required: ['abc']
-          }]
-        }]
+            oneOf: [
+              {
+                type: ['string']
+              }, {
+                type: [
+                  'object', 'array'
+                ],
+                required: ['abc']
+              }
+            ]
+          }
+        ]
       })
 
       expect(result).to.eql({
-        'oneOf': [{
-          'type': 'string',
-          'required': ['123']
-        }, {
-          'type': [
-            'object', 'array'
-          ],
-          'required': ['123', 'abc']
-        }, {
-          'type': ['string'],
-          'required': ['abc']
-        }, {
-          'type': [
-            'object', 'array'
-          ],
-          'required': ['abc']
-        }]
+        'oneOf': [
+          {
+            'type': 'string',
+            'required': ['123']
+          }, {
+            'type': [
+              'object', 'array'
+            ],
+            'required': ['123', 'abc']
+          }, {
+            'type': ['string'],
+            'required': ['abc']
+          }, {
+            'type': [
+              'object', 'array'
+            ],
+            'required': ['abc']
+          }
+        ]
       })
     })
 
     it('merges nested allOf if inside singular oneOf', function() {
       var result = merger({
-        allOf: [{
-          type: [
-            'array', 'string', 'number'
-          ],
-          oneOf: [{
-            required: ['123'],
-            allOf: [{
-              required: ['768']
-            }]
-          }]
-        }, {
-          type: ['array', 'string']
-        }]
+        allOf: [
+          {
+            type: [
+              'array', 'string', 'number'
+            ],
+            oneOf: [
+              {
+                required: ['123'],
+                allOf: [
+                  {
+                    required: ['768']
+                  }
+                ]
+              }
+            ]
+          }, {
+            type: ['array', 'string']
+          }
+        ]
       })
 
       expect(result).to.eql({
         type: [
           'array', 'string'
         ],
-        oneOf: [{
-          required: ['123', '768']
-        }]
+        oneOf: [
+          {
+            required: ['123', '768']
+          }
+        ]
       })
     })
 
     it('merges nested allOf if inside multiple oneOf', function() {
       var result = merger({
-        allOf: [{
-          type: [
-            'array', 'string', 'number'
-          ],
-          oneOf: [{
+        allOf: [
+          {
             type: [
-              'array', 'object'
+              'array', 'string', 'number'
             ],
-            allOf: [{
-              type: 'object'
-            }]
-          }]
-        }, {
-          type: [
-            'array', 'string'
-          ],
-          oneOf: [{
-            type: 'string'
+            oneOf: [
+              {
+                type: [
+                  'array', 'object'
+                ],
+                allOf: [
+                  {
+                    type: 'object'
+                  }
+                ]
+              }
+            ]
           }, {
-            type: 'object'
-          }]
-        }]
+            type: [
+              'array', 'string'
+            ],
+            oneOf: [
+              {
+                type: 'string'
+              }, {
+                type: 'object'
+              }
+            ]
+          }
+        ]
       })
 
       expect(result).to.eql({
         type: [
           'array', 'string'
         ],
-        oneOf: [{
-          type: 'object'
-        }]
+        oneOf: [
+          {
+            type: 'object'
+          }
+        ]
       })
     })
 
     it.skip('throws if no compatible when merging oneOf', function() {
       expect(function() {
-        merger({
-          allOf: [{}, {
-            oneOf: [{
-              required: ['123']
-            }]
+        merger({allOf: [
+          {}, {
+            oneOf: [
+              {
+                required: ['123']
+              }
+            ]
           }, {
-            oneOf: [{
-              required: ['fdasfd']
-            }]
-          }]
-        })
+            oneOf: [
+              {
+                required: ['fdasfd']
+              }
+            ]
+          }
+        ]})
       }).to.throw(/incompatible/)
 
       expect(function() {
-        merger({
-          allOf: [{}, {
-            oneOf: [{
-              required: ['123']
-            }, {
-              properties: {
-                name: {
-                  type: 'string'
+        merger({allOf: [
+          {}, {
+            oneOf: [
+              {
+                required: ['123']
+              }, {
+                properties: {
+                  name: {
+                    type: 'string'
+                  }
                 }
               }
-            }]
+            ]
           }, {
-            oneOf: [{
-              required: ['fdasfd']
-            }]
-          }]
-        })
+            oneOf: [
+              {
+                required: ['fdasfd']
+              }
+            ]
+          }
+        ]})
       }).to.throw(/incompatible/)
     })
 
@@ -665,36 +779,42 @@ describe('module', function() {
             type: 'string'
           }
         },
-        allOf: [{
-          properties: {
-            name: {
-              type: 'string',
-              minLength: 10
+        allOf: [
+          {
+            properties: {
+              name: {
+                type: 'string',
+                minLength: 10
+              }
             }
+          }, {
+            oneOf: [
+              {
+                required: ['123']
+              }, {
+                properties: {
+                  name: {
+                    type: 'string',
+                    minLength: 15
+                  }
+                }
+              }
+            ]
+          }, {
+            oneOf: [
+              {
+                required: ['abc']
+              }, {
+                properties: {
+                  name: {
+                    type: 'string',
+                    minLength: 15
+                  }
+                }
+              }
+            ]
           }
-        }, {
-          oneOf: [{
-            required: ['123']
-          }, {
-            properties: {
-              name: {
-                type: 'string',
-                minLength: 15
-              }
-            }
-          }]
-        }, {
-          oneOf: [{
-            required: ['abc']
-          }, {
-            properties: {
-              name: {
-                type: 'string',
-                minLength: 15
-              }
-            }
-          }]
-        }]
+        ]
       })
 
       expect(result).to.eql({
@@ -709,49 +829,51 @@ describe('module', function() {
 
     it('merges not using allOf', function() {
       var result = merger({
-        allOf: [{
-          not: {
-            properties: {
-              name: {
-                type: 'string'
+        allOf: [
+          {
+            not: {
+              properties: {
+                name: {
+                  type: 'string'
+                }
+              }
+            }
+          }, {
+            not: {
+              properties: {
+                name: {
+                  type: ['string', 'null']
+                }
               }
             }
           }
-        }, {
-          not: {
-            properties: {
-              name: {
-                type: ['string', 'null']
-              }
-            }
-          }
-        }]
+        ]
       })
 
       expect(result).to.eql({
         not: {
-          anyOf: [{
-            properties: {
-              name: {
-                type: 'string'
+          anyOf: [
+            {
+              properties: {
+                name: {
+                  type: 'string'
+                }
+              }
+            }, {
+              properties: {
+                name: {
+                  type: ['string', 'null']
+                }
               }
             }
-          },
-          {
-            properties: {
-              name: {
-                type: ['string', 'null']
-              }
-            }
-          }
           ]
         }
       })
     })
 
     it('merges contains', function() {
-      var result = merger({
-        allOf: [{}, {
+      var result = merger({allOf: [
+        {}, {
           contains: {
             properties: {
               name: {
@@ -769,19 +891,21 @@ describe('module', function() {
               }
             }
           }
-        }]
-      })
+        }
+      ]})
 
       expect(result).to.eql({
         contains: {
           properties: {
             name: {
               type: 'string',
-              allOf: [{
-                pattern: 'bar'
-              }, {
-                pattern: 'foo'
-              }]
+              allOf: [
+                {
+                  pattern: 'bar'
+                }, {
+                  pattern: 'foo'
+                }
+              ]
             }
           }
         }
@@ -789,194 +913,210 @@ describe('module', function() {
     })
 
     it('merges pattern using allOf', function() {
-      var result = merger({
-        allOf: [{}, {
+      var result = merger({allOf: [
+        {}, {
           pattern: 'fdsaf'
         }, {
           pattern: 'abba'
-        }]
-      })
+        }
+      ]})
 
       expect(result).to.eql({
-        allOf: [{
-          pattern: 'fdsaf'
-        }, {
-          pattern: 'abba'
-        }]
+        allOf: [
+          {
+            pattern: 'fdsaf'
+          }, {
+            pattern: 'abba'
+          }
+        ]
       })
 
       var result2 = merger({
-        allOf: [{
-          pattern: 'abba'
-        }]
+        allOf: [
+          {
+            pattern: 'abba'
+          }
+        ]
       })
 
-      expect(result2).to.eql({
-        pattern: 'abba'
-      })
+      expect(result2).to.eql({pattern: 'abba'})
     })
 
     it('extracts pattern from anyOf and oneOf using | operator in regexp')
 
     it.skip('merges multipleOf using allOf or direct assignment', function() {
       var result = merger({
-        allOf: [{
-          title: 'foo',
-          type: [
-            'number', 'integer'
-          ],
-          multipleOf: 2
-        }, {
-          type: 'integer',
-          multipleOf: 3
-        }]
+        allOf: [
+          {
+            title: 'foo',
+            type: [
+              'number', 'integer'
+            ],
+            multipleOf: 2
+          }, {
+            type: 'integer',
+            multipleOf: 3
+          }
+        ]
       })
 
       expect(result).to.eql({
         type: 'integer',
         title: 'foo',
-        allOf: [{
-          multipleOf: 2
-        }, {
-          multipleOf: 3
-        }]
+        allOf: [
+          {
+            multipleOf: 2
+          }, {
+            multipleOf: 3
+          }
+        ]
       })
 
       var result2 = merger({
-        allOf: [{
-          multipleOf: 1
-        }]
+        allOf: [
+          {
+            multipleOf: 1
+          }
+        ]
       })
 
-      expect(result2).to.eql({
-        multipleOf: 1
-      })
+      expect(result2).to.eql({multipleOf: 1})
     })
 
     it('merges multipleOf by finding lowest common multiple (LCM)', function() {
-      var result = merger({
-        allOf: [{}, {
+      var result = merger({allOf: [
+        {}, {
           multipleOf: 0.2,
-          allOf: [{
-            multipleOf: 2,
-            allOf: [{
+          allOf: [
+            {
               multipleOf: 2,
-              allOf: [{
-                multipleOf: 2,
-                allOf: [{
-                  multipleOf: 3,
-                  allOf: [{
-                    multipleOf: 1.5,
-                    allOf: [{
-                      multipleOf: 0.5
-                    }]
-                  }]
-                }]
-              }]
-            }]
-          }]
+              allOf: [
+                {
+                  multipleOf: 2,
+                  allOf: [
+                    {
+                      multipleOf: 2,
+                      allOf: [
+                        {
+                          multipleOf: 3,
+                          allOf: [
+                            {
+                              multipleOf: 1.5,
+                              allOf: [
+                                {
+                                  multipleOf: 0.5
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }, {
           multipleOf: 0.3
-        }]
-      })
+        }
+      ]})
 
-      expect(result).to.eql({
-        multipleOf: 6
-      })
+      expect(result).to.eql({multipleOf: 6})
 
       expect(merger({
-        allOf: [{
-          multipleOf: 4
-        }, {
-          multipleOf: 15
-        }, {
-          multipleOf: 3
-        }]
-      })).to.eql({
-        multipleOf: 60
-      })
+        allOf: [
+          {
+            multipleOf: 4
+          }, {
+            multipleOf: 15
+          }, {
+            multipleOf: 3
+          }
+        ]
+      })).to.eql({multipleOf: 60})
 
       expect(merger({
-        allOf: [{
-          multipleOf: 0.3
-        }, {
-          multipleOf: 0.7
-        }, {
-          multipleOf: 1
-        }]
-      })).to.eql({
-        multipleOf: 21
-      })
+        allOf: [
+          {
+            multipleOf: 0.3
+          }, {
+            multipleOf: 0.7
+          }, {
+            multipleOf: 1
+          }
+        ]
+      })).to.eql({multipleOf: 21})
 
       expect(merger({
-        allOf: [{
-          multipleOf: 0.5
-        }, {
-          multipleOf: 2
-        }]
-      })).to.eql({
-        multipleOf: 2
-      })
+        allOf: [
+          {
+            multipleOf: 0.5
+          }, {
+            multipleOf: 2
+          }
+        ]
+      })).to.eql({multipleOf: 2})
 
       expect(merger({
-        allOf: [{
-          multipleOf: 0.3
-        }, {
-          multipleOf: 0.5
-        }, {
-          multipleOf: 1
-        }]
-      })).to.eql({
-        multipleOf: 3
-      })
+        allOf: [
+          {
+            multipleOf: 0.3
+          }, {
+            multipleOf: 0.5
+          }, {
+            multipleOf: 1
+          }
+        ]
+      })).to.eql({multipleOf: 3})
 
       expect(merger({
-        allOf: [{
-          multipleOf: 0.3
-        }, {
-          multipleOf: 0.7
-        }, {
-          multipleOf: 1
-        }]
-      })).to.eql({
-        multipleOf: 21
-      })
+        allOf: [
+          {
+            multipleOf: 0.3
+          }, {
+            multipleOf: 0.7
+          }, {
+            multipleOf: 1
+          }
+        ]
+      })).to.eql({multipleOf: 21})
 
       expect(merger({
-        allOf: [{
-          multipleOf: 0.4
-        }, {
-          multipleOf: 0.7
-        }, {
-          multipleOf: 3
-        }]
-      })).to.eql({
-        multipleOf: 42
-      })
+        allOf: [
+          {
+            multipleOf: 0.4
+          }, {
+            multipleOf: 0.7
+          }, {
+            multipleOf: 3
+          }
+        ]
+      })).to.eql({multipleOf: 42})
 
       expect(merger({
-        allOf: [{
-          multipleOf: 0.2
-        }, {
-          multipleOf: 0.65
-        }, {
-          multipleOf: 1
-        }]
-      })).to.eql({
-        multipleOf: 13
-      })
+        allOf: [
+          {
+            multipleOf: 0.2
+          }, {
+            multipleOf: 0.65
+          }, {
+            multipleOf: 1
+          }
+        ]
+      })).to.eql({multipleOf: 13})
 
       expect(merger({
-        allOf: [{
-          multipleOf: 100000
-        }, {
-          multipleOf: 1000000
-        }, {
-          multipleOf: 500000
-        }]
-      })).to.eql({
-        multipleOf: 1000000
-      })
+        allOf: [
+          {
+            multipleOf: 100000
+          }, {
+            multipleOf: 1000000
+          }, {
+            multipleOf: 500000
+          }
+        ]
+      })).to.eql({multipleOf: 1000000})
     })
   })
 
@@ -984,9 +1124,11 @@ describe('module', function() {
     it('merges required object', function() {
       expect(merger({
         required: ['prop2'],
-        allOf: [{
-          required: ['prop2', 'prop1']
-        }]
+        allOf: [
+          {
+            required: ['prop2', 'prop1']
+          }
+        ]
       })).to.eql({
         required: ['prop1', 'prop2']
       })
@@ -999,9 +1141,11 @@ describe('module', function() {
             prop1: 'foo'
           }
         ],
-        allOf: [{
-          default: ['prop2', 'prop1']
-        }]
+        allOf: [
+          {
+            default: ['prop2', 'prop1']
+          }
+        ]
       })).to.eql({
         default: [
           'prop2', {
@@ -1016,9 +1160,11 @@ describe('module', function() {
         default: {
           foo: 'bar'
         },
-        allOf: [{
-          default: ['prop2', 'prop1']
-        }]
+        allOf: [
+          {
+            default: ['prop2', 'prop1']
+          }
+        ]
       })).to.eql({
         default: {
           foo: 'bar'
@@ -1036,23 +1182,25 @@ describe('module', function() {
             type: 'string'
           }
         },
-        allOf: [{
-          properties: {
-            name: {
-              title: 'allof1',
-              type: 'string'
-            },
-            added: {
-              type: 'integer'
+        allOf: [
+          {
+            properties: {
+              name: {
+                title: 'allof1',
+                type: 'string'
+              },
+              added: {
+                type: 'integer'
+              }
+            }
+          }, {
+            properties: {
+              name: {
+                type: 'string'
+              }
             }
           }
-        }, {
-          properties: {
-            name: {
-              type: 'string'
-            }
-          }
-        }]
+        ]
       })).to.eql({
         properties: {
           name: {
@@ -1071,24 +1219,26 @@ describe('module', function() {
         properties: {
           name: true
         },
-        allOf: [{
-          properties: {
-            name: {
-              title: 'allof1',
-              type: 'string'
-            },
-            added: {
-              type: 'integer'
+        allOf: [
+          {
+            properties: {
+              name: {
+                title: 'allof1',
+                type: 'string'
+              },
+              added: {
+                type: 'integer'
+              }
+            }
+          }, {
+            properties: {
+              name: {
+                type: 'string',
+                minLength: 5
+              }
             }
           }
-        }, {
-          properties: {
-            name: {
-              type: 'string',
-              minLength: 5
-            }
-          }
-        }]
+        ]
       })).to.eql({
         properties: {
           name: {
@@ -1106,21 +1256,23 @@ describe('module', function() {
         properties: {
           name: false
         },
-        allOf: [{
-          properties: {
-            name: {
-              title: 'allof1',
-              type: 'string'
-            },
-            added: {
-              type: 'integer'
+        allOf: [
+          {
+            properties: {
+              name: {
+                title: 'allof1',
+                type: 'string'
+              },
+              added: {
+                type: 'integer'
+              }
+            }
+          }, {
+            properties: {
+              name: true
             }
           }
-        }, {
-          properties: {
-            name: true
-          }
-        }]
+        ]
       })).to.eql({
         properties: {
           name: false,
@@ -1138,18 +1290,20 @@ describe('module', function() {
         properties: {
           name: true
         },
-        allOf: [{
-          properties: {
-            name: false,
-            added: {
-              type: 'integer'
+        allOf: [
+          {
+            properties: {
+              name: false,
+              added: {
+                type: 'integer'
+              }
+            }
+          }, {
+            properties: {
+              name: true
             }
           }
-        }, {
-          properties: {
-            name: true
-          }
-        }]
+        ]
       })).to.eql({
         properties: {
           name: false,
@@ -1164,53 +1318,63 @@ describe('module', function() {
       expect(merger({
         properties: {
           name: {
-            allOf: [{
-              pattern: '^.+$'
-            }]
+            allOf: [
+              {
+                pattern: '^.+$'
+              }
+            ]
           }
         },
-        allOf: [{
-          properties: {
-            name: true,
-            added: {
-              type: 'integer',
-              title: 'pri1',
-              allOf: [{
-                title: 'pri2',
-                type: [
-                  'string', 'integer'
-                ],
-                minimum: 15,
-                maximum: 10
-              }]
-            }
-          },
-          allOf: [{
+        allOf: [
+          {
             properties: {
               name: true,
               added: {
                 type: 'integer',
-                minimum: 5
+                title: 'pri1',
+                allOf: [
+                  {
+                    title: 'pri2',
+                    type: [
+                      'string', 'integer'
+                    ],
+                    minimum: 15,
+                    maximum: 10
+                  }
+                ]
               }
             },
-            allOf: [{
-              properties: {
-                added: {
-                  title: 'pri3',
-                  type: 'integer',
-                  minimum: 10
-                }
+            allOf: [
+              {
+                properties: {
+                  name: true,
+                  added: {
+                    type: 'integer',
+                    minimum: 5
+                  }
+                },
+                allOf: [
+                  {
+                    properties: {
+                      added: {
+                        title: 'pri3',
+                        type: 'integer',
+                        minimum: 10
+                      }
+                    }
+                  }
+                ]
               }
-            }]
-          }]
-        }, {
-          properties: {
-            name: true,
-            added: {
-              minimum: 7
+            ]
+          }, {
+            properties: {
+              name: true,
+              added: {
+                minimum: 7
+              }
             }
           }
-        }]
+        ]
       })).to.eql({
         properties: {
           name: {
@@ -1238,21 +1402,25 @@ describe('module', function() {
                 minLength: 8
               }
             },
-            allOf: [{
-              properties: {
-                name: {
-                  minLength: 5,
-                  maxLength: 10
-                }
-              },
-              allOf: [{
+            allOf: [
+              {
                 properties: {
-                  prop1: {
-                    minLength: 7
+                  name: {
+                    minLength: 5,
+                    maxLength: 10
                   }
-                }
-              }]
-            }]
+                },
+                allOf: [
+                  {
+                    properties: {
+                      prop1: {
+                        minLength: 7
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
           }
         }
       }
@@ -1278,9 +1446,7 @@ describe('module', function() {
 
       var result = merger(schema)
 
-      expect(result).to.eql({
-        properties: expected
-      })
+      expect(result).to.eql({properties: expected})
     })
 
     it('merges any definitions and circular', function() {
@@ -1301,21 +1467,25 @@ describe('module', function() {
                 $ref: '#/definitions/person'
               }
             },
-            allOf: [{
-              properties: {
-                name: {
-                  minLength: 5,
-                  maxLength: 10
-                }
-              },
-              allOf: [{
+            allOf: [
+              {
                 properties: {
-                  prop1: {
-                    minLength: 7
+                  name: {
+                    minLength: 5,
+                    maxLength: 10
                   }
-                }
-              }]
-            }]
+                },
+                allOf: [
+                  {
+                    properties: {
+                      prop1: {
+                        minLength: 7
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
           }
         }
       }
@@ -1340,10 +1510,7 @@ describe('module', function() {
 
         var result = merger(schema)
 
-        expect(result).to.eql({
-          properties: expected,
-          definitions: expected
-        })
+        expect(result).to.eql({properties: expected, definitions: expected})
 
         expect(result).to.equal(dereferenced)
 
@@ -1361,25 +1528,31 @@ describe('module', function() {
             type: [
               'string', 'null', 'integer'
             ],
-            allOf: [{
-              minimum: 5
-            }]
+            allOf: [
+              {
+                minimum: 5
+              }
+            ]
           },
           'bar': ['prop1', 'prop2']
         },
-        allOf: [{
-          dependencies: {
-            'foo': {
-              type: [
-                'string', 'null'
-              ],
-              allOf: [{
-                minimum: 7
-              }]
-            },
-            'bar': ['prop4']
+        allOf: [
+          {
+            dependencies: {
+              'foo': {
+                type: [
+                  'string', 'null'
+                ],
+                allOf: [
+                  {
+                    minimum: 7
+                  }
+                ]
+              },
+              'bar': ['prop4']
+            }
           }
-        }]
+        ]
       })
 
       expect(result).to.eql({
@@ -1405,11 +1578,13 @@ describe('module', function() {
             required: ['abc']
           }
         },
-        allOf: [{
-          dependencies: {
-            'bar': ['prop4']
+        allOf: [
+          {
+            dependencies: {
+              'bar': ['prop4']
+            }
           }
-        }]
+        ]
       })
 
       expect(result).to.eql({
@@ -1430,19 +1605,25 @@ describe('module', function() {
       var result = merger({
         propertyNames: {
           type: 'string',
-          allOf: [{
-            minLength: 5
-          }]
+          allOf: [
+            {
+              minLength: 5
+            }
+          ]
         },
-        allOf: [{
-          propertyNames: {
-            type: 'string',
-            pattern: 'abc.*',
-            allOf: [{
-              maxLength: 7
-            }]
+        allOf: [
+          {
+            propertyNames: {
+              type: 'string',
+              pattern: 'abc.*',
+              allOf: [
+                {
+                  maxLength: 7
+                }
+              ]
+            }
           }
-        }]
+        ]
       })
 
       expect(result).to.eql({
