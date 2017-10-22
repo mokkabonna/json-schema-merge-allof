@@ -29,6 +29,7 @@
   },
   "homepage": "https://github.com/mokkabonna/json-schema-merge-allof#readme",
   "devDependencies": {
+    "ajv": "^5.2.3",
     "chai": "^4.1.2",
     "coveralls": "^3.0.0",
     "eslint": "^4.8.0",

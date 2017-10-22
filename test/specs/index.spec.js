@@ -1,8 +1,24 @@
 var chai = require('chai')
-var merger = require('../../src')
+var mergerModule = require('../../src')
+var Ajv = require('ajv')
 var $RefParser = require('json-schema-ref-parser')
 
 var expect = chai.expect
+var ajv = new Ajv()
+
+function merger(schema, options) {
+  var result = mergerModule(schema, options)
+  try {
+    if (!ajv.validateSchema(result)) {
+      throw new Error('Schema returned by resolver isn\'t valid.')
+    }
+    return result
+  } catch (e) {
+    if (!/stack/i.test(e.message)) {
+      throw e
+    }
+  }
+}
 
 describe('module', function() {
   it('combines simple usecase', function() {
