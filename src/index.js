@@ -70,7 +70,7 @@ function getItemSchemas(subSchemas, key) {
 
     if (Array.isArray(sub.items)) {
       var schemaAtPos = sub.items[key]
-      if (schemaAtPos) {
+      if (isSchema(schemaAtPos)) {
         return schemaAtPos
       } else if (sub.hasOwnProperty('additionalItems')) {
         return sub.additionalItems
