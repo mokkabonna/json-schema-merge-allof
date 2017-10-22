@@ -23,7 +23,7 @@ var isEmptySchema = (obj) => (!keys(obj).length) && obj !== false && obj !== tru
 var isSchema = (val) => isPlainObject(val) || val === true || val === false
 var isFalse = (val) => val === false
 var isTrue = (val) => val === true
-var schemaResolver = (compacted, key, mergeSchemas, totalSchemas, parent) => mergeSchemas(compacted, compacted[0])
+var schemaResolver = (compacted, key, mergeSchemas) => mergeSchemas(compacted)
 var stringArray = (values) => sortBy(uniq(flattenDeep(values)))
 var notUndefined = (val) => val !== undefined
 var allUniqueKeys = (arr) => uniq(flattenDeep(arr.map(keys)))
