@@ -324,10 +324,16 @@ var defaultResolvers = {
     var itemsCompacted = items.filter(notUndefined)
     var returnObject = {}
 
+    function createMerger(parentKey) {
+      return function(schemas, key) {
+        return mergeSchemas(schemas, [parentKey].concat(key))
+      }
+    }
+
     if (itemsCompacted.every(isSchema)) {
-      returnObject.items = mergeSchemas(items)
+      returnObject.items = mergeSchemas(items, ['items'])
     } else {
-      returnObject.items = mergeSchemaGroup(values, mergeSchemas, items)
+      returnObject.items = mergeSchemaGroup(values, createMerger('items'), items)
     }
 
     var schemasAtLastPos
@@ -338,7 +344,7 @@ var defaultResolvers = {
     }
 
     if (schemasAtLastPos) {
-      returnObject.additionalItems = mergeSchemas(schemasAtLastPos)
+      returnObject.additionalItems = mergeSchemas(schemasAtLastPos, ['additionalItems'])
     }
 
     if (returnObject.additionalItems === false && Array.isArray(returnObject.items)) {
@@ -444,17 +450,12 @@ function merger(rootSchema, options) {
 
   findCircular(rootSchema)
 
-  var max = 10000000
-  var current = 0
   function mergeSchemas(schemas, paths) {
     paths = paths || []
     schemas = normalizeAsArray(schemas).filter(notUndefined)
     schemas = cloneDeep(schemas)
 
     var path = paths.join('.')
-
-    current++
-    if (current > max) return
 
     // return undefined, an empty schema
     if (!schemas.length) {
@@ -471,30 +472,20 @@ function merger(rootSchema, options) {
 
     // there are no false and we don't need the true ones as they accept everything
     schemas = schemas.filter(isPlainObject)
-    // var previousResult = totalSchemas.find(function(result) {
-    //   return originalSchemas.every(function(schema) {
-    //     return result.schemas.indexOf(schema) !== -1
-    //   })
-    // })
-    //
-    // if (previousResult) {
-    //   console.log('found previous result')
-    //   return previousResult.result
-    // }
 
     var found = keys(totalSchemas).find(function(k) {
-      return path.indexOf(k) === 0 && k.indexOf(path) === 0
+      return path.indexOf(k) === 0 && k.indexOf(path) === 0 && k !== ''
     })
 
     var merged = totalSchemas[path] || {}
     if (found) {
-      console.log(totalSchemas)
       return merged
     }
+
     var allKeys = allUniqueKeys(schemas)
 
     if (contains(allKeys, 'allOf')) {
-      return mergeSchemas(flattenDeep(schemas.map(s => getAllOf(s))), paths)
+      return mergeSchemas(flattenDeep(schemas.map(s => getAllOf(s))), paths.concat(''))
     }
 
     function createMerger(key) {
@@ -505,6 +496,7 @@ function merger(rootSchema, options) {
 
     var propertyKeys = allKeys.filter(isPropertyRelated)
     Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, function(schemas, innerPaths) {
+      console.log(paths, innerPaths)
       return mergeSchemas(schemas, paths.concat(innerPaths))
     }, options, totalSchemas))
     pullAll(allKeys, propertyKeys)
