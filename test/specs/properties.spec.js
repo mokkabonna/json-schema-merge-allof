@@ -6,7 +6,7 @@ var expect = chai.expect
 var Ajv = require('ajv')
 
 var ajv = new Ajv()
-describe.only('properties', function() {
+describe('properties', function() {
   describe('when property name has same as a reserved word', function() {
     it('does not treat it as a reserved word', function() {
       var stub = sinon.stub().returns({

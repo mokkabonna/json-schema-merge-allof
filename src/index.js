@@ -44,8 +44,35 @@ function getValues(schemas, key) {
   })
 }
 
+function getItemSchemas(subSchemas, key) {
+  return subSchemas.map(function(sub) {
+    if (!sub) return
+
+    if (Array.isArray(sub.items)) {
+      var schemaAtPos = sub.items[key]
+      if (schemaAtPos) {
+        return schemaAtPos
+      } else if (sub.hasOwnProperty('additionalItems')) {
+        return sub.additionalItems
+      }
+    } else {
+      return sub.items
+    }
+  })
+}
+
+function getAdditionalSchemas(subSchemas) {
+  return subSchemas.map(function(sub) {
+    if (!sub) return
+    if (Array.isArray(sub.items)) {
+      return sub.additionalItems
+    }
+    return sub.items
+  })
+}
+
 function keys(obj) {
-  if (isPlainObject(obj)) {
+  if (isPlainObject(obj) || Array.isArray(obj)) {
     return Object.keys(obj)
   } else {
     return []
@@ -59,6 +86,10 @@ function withoutArr(arr) {
 
 function isPropertyRelated(key) {
   return contains(propertyRelated, key)
+}
+
+function isItemsRelated(key) {
+  return contains(itemsRelated, key)
 }
 
 function getAnyOfCombinations(arrOfArrays, combinations) {
@@ -127,6 +158,7 @@ function notUndefined(val) {
 }
 
 var propertyRelated = ['properties', 'patternProperties', 'additionalProperties']
+var itemsRelated = ['items', 'additionalItems']
 var schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
 var schemaArrays = ['anyOf', 'oneOf']
 var schemaProps = [
@@ -259,33 +291,52 @@ var defaultResolvers = {
       return all
     }, {})
   },
-  items: function(compacted, key, mergeSchemas) {
-    function getAllSchemas(arrayOfArrays, pos, max) {
-      var all = []
-      for (var i = 0; i < max; i++) {
-        all.push(arrayOfArrays[i] && arrayOfArrays[i][pos])
-      }
+  items: function(values, key, mergeSchemas) {
+    var items = values.map(s => s.items)
+    var itemsCompacted = items.filter(notUndefined)
 
-      return flatten(all)
-    }
+    var returnObject = {}
 
-    if (compacted.every(isSchema)) {
-      return schemaResolver.apply(null, arguments)
-    } else if (compacted.every(Array.isArray)) {
-      var max = compacted.reduce(function(sum, b) {
-        return Math.max(sum, b.length)
-      }, 0)
+    if (itemsCompacted.every(isSchema)) {
+      returnObject.items = mergeSchemas(items)
+    } else {
+      var allItems = uniq(flattenDeep(items.map(keys)))
 
-      return compacted.reduce(function(all, items, pos) {
-        var schemasAtCurrentPos = uniqWith(getAllSchemas(compacted, pos, max).filter(notUndefined), compare)
-
-        if (schemasAtCurrentPos.length !== 1) {
-          throwIncompatible(schemasAtCurrentPos, key)
-        }
-        all[pos] = mergeSchemas(schemasAtCurrentPos, schemasAtCurrentPos[0])
+      returnObject.items = allItems.reduce(function(all, index) {
+        var itemSchemas = getItemSchemas(values, index)
+        var innerCompacted = uniqWith(itemSchemas.filter(notUndefined), compare)
+        all[index] = mergeSchemas(innerCompacted)
         return all
-      }, compacted[0])
+      }, [])
     }
+
+    var schemasAtLastPos
+    if (itemsCompacted.every(Array.isArray)) {
+      schemasAtLastPos = values.map(s => s.additionalItems)
+    } else if (itemsCompacted.some(Array.isArray)) {
+      schemasAtLastPos = getAdditionalSchemas(values)
+    }
+
+    if (schemasAtLastPos) {
+      returnObject.additionalItems = mergeSchemas(schemasAtLastPos)
+    }
+
+    if (returnObject.additionalItems === false) {
+      forEach(returnObject.items, function(schema, prop) {
+        if (schema === false) {
+          returnObject.items.splice(prop, 1)
+        }
+      })
+    }
+
+    // cleanup empty
+    for (var prop in returnObject) {
+      if (returnObject.hasOwnProperty(prop) && isEmptySchema(returnObject[prop])) {
+        delete returnObject[prop]
+      }
+    }
+
+    return returnObject
   },
   oneOf: function(compacted, key, mergeSchemas) {
     var combinations = getAnyOfCombinations(cloneDeep(compacted))
@@ -415,8 +466,8 @@ function merger(rootSchema, options, totalSchemas) {
     var propertyKeys = allKeys.filter(isPropertyRelated)
 
     if (propertyKeys.length) {
-      var resolver = options.resolvers.properties
-      if (!resolver) {
+      var propResolver = options.resolvers.properties
+      if (!propResolver) {
         throw new Error('No resolver found for properties.')
       }
 
@@ -429,7 +480,7 @@ function merger(rootSchema, options, totalSchemas) {
         }, {})
       }).filter(notUndefined), compare)
 
-      var result = resolver(compacted, 'properties', mergeSchemas, totalSchemas, options)
+      var result = propResolver(compacted, 'properties', mergeSchemas, totalSchemas, options)
 
       if (!isPlainObject(result)) {
         throwIncompatible(compacted, 'properties')
@@ -438,6 +489,34 @@ function merger(rootSchema, options, totalSchemas) {
       Object.assign(merged, result)
 
       pullAll(allKeys, propertyKeys)
+    }
+
+    var itemKeys = allKeys.filter(isItemsRelated)
+
+    if (itemKeys.length) {
+      var itemsResolver = options.resolvers.items
+      if (!itemsResolver) {
+        throw new Error('No resolver found for items.')
+      }
+
+      var itemsCompacted = uniqWith(schemas.map(function(schema) {
+        return itemKeys.reduce(function(all, key) {
+          if (schema[key] !== undefined) {
+            all[key] = schema[key]
+          }
+          return all
+        }, {})
+      }).filter(notUndefined), compare)
+
+      var itemsResult = itemsResolver(itemsCompacted, 'items', mergeSchemas, totalSchemas, options)
+
+      if (!isPlainObject(itemsResult)) {
+        throwIncompatible(itemsCompacted, 'items')
+      }
+
+      Object.assign(merged, itemsResult)
+
+      pullAll(allKeys, itemKeys)
     }
 
     allKeys.forEach(function(key) {
