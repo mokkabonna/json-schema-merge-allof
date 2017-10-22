@@ -3,7 +3,7 @@
 > Merge schemas combined using allOf into a more readable composed schema free from allOf.
 
 ```bash
-npm install json-schema-compare --save
+npm install json-schema-merge-allof --save
 ```
 
 ## Features
