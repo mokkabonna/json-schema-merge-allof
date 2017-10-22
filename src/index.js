@@ -390,7 +390,6 @@ defaultResolvers.description = first
 defaultResolvers.examples = examples
 defaultResolvers.exclusiveMaximum = minimumValue
 defaultResolvers.exclusiveMinimum = maximumValue
-defaultResolvers.first = first
 defaultResolvers.maximum = minimumValue
 defaultResolvers.maxItems = minimumValue
 defaultResolvers.maxLength = minimumValue
