@@ -1394,6 +1394,35 @@ describe('module', function() {
         }
       })
     })
+
+    it('merges mixed mode dependency', function() {
+      var result = merger({
+        dependencies: {
+          'bar': {
+            type: [
+              'string', 'null', 'integer'
+            ],
+            required: ['abc']
+          }
+        },
+        allOf: [{
+          dependencies: {
+            'bar': ['prop4']
+          }
+        }]
+      })
+
+      expect(result).to.eql({
+        dependencies: {
+          'bar': {
+            type: [
+              'string', 'null', 'integer'
+            ],
+            required: ['abc', 'prop4']
+          }
+        }
+      })
+    })
   })
 
   describe('propertyNames', function() {

@@ -206,6 +206,12 @@ function removeFalseSchemasFromArray(target) {
   })
 }
 
+function createRequiredMetaArray(arr) {
+  return {
+    required: arr
+  }
+}
+
 var propertyRelated = ['properties', 'patternProperties', 'additionalProperties']
 var itemsRelated = ['items', 'additionalItems']
 var schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
@@ -286,9 +292,16 @@ var defaultResolvers = {
       var innerCompacted = uniqWith(childSchemas.filter(notUndefined), isEqual)
 
       // to support dependencies
-      var allArray = innerCompacted.every(Array.isArray)
-      if (allArray) {
-        all[childKey] = stringArray(innerCompacted)
+      var innerArrays = innerCompacted.filter(Array.isArray)
+
+      if (innerArrays.length) {
+        if (innerArrays.length === innerCompacted.length) {
+          all[childKey] = stringArray(innerCompacted)
+        } else {
+          var innerSchemas = innerCompacted.filter(isSchema)
+          var arrayMetaScheams = innerArrays.map(createRequiredMetaArray)
+          all[childKey] = mergeSchemas(innerSchemas.concat(arrayMetaScheams))
+        }
         return all
       }
 
