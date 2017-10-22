@@ -26,6 +26,15 @@ var isTrue = (val) => val === true
 var schemaResolver = (compacted, key, mergeSchemas, totalSchemas, parent) => mergeSchemas(compacted, compacted[0])
 var stringArray = (values) => sortBy(uniq(flattenDeep(values)))
 var notUndefined = (val) => val !== undefined
+var allUniqueKeys = (arr) => uniq(flattenDeep(arr.map(keys)))
+
+// resolvers
+var first = compacted => compacted[0]
+var required = compacted => stringArray(compacted)
+var maximumValue = compacted => Math.max.apply(Math, compacted)
+var minimumValue = compacted => Math.min.apply(Math, compacted)
+var uniqueItems = compacted => compacted.some(isTrue)
+var examples = compacted => uniqWith(flatten(compacted), isEqual)
 
 function compareProp(key) {
   return function(a, b) {
@@ -70,6 +79,16 @@ function getItemSchemas(subSchemas, key) {
       return sub.items
     }
   })
+}
+
+function tryMergeSchemaGroups(schemaGroups, mergeSchemas) {
+  return schemaGroups.map(function(schemas) {
+    try {
+      return mergeSchemas(schemas)
+    } catch (e) {
+      return undefined
+    }
+  }).filter(notUndefined)
 }
 
 function getAdditionalSchemas(subSchemas) {
@@ -159,6 +178,34 @@ function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options) {
   }
 }
 
+// Provide source when array
+function mergeSchemaGroup(group, mergeSchemas, source) {
+  var allKeys = allUniqueKeys(source || group)
+  var extractor = source ? getItemSchemas : getValues
+  return allKeys.reduce(function(all, key) {
+    var schemas = extractor(group, key)
+    var compacted = uniqWith(schemas.filter(notUndefined), compare)
+    all[key] = mergeSchemas(compacted)
+    return all
+  }, source ? [] : {})
+}
+
+function removeFalseSchemas(target) {
+  forEach(target, function(schema, prop) {
+    if (schema === false) {
+      delete target[prop]
+    }
+  })
+}
+
+function removeFalseSchemasFromArray(target) {
+  forEach(target, function(schema, index) {
+    if (schema === false) {
+      target.splice(index, 1)
+    }
+  })
+}
+
 var propertyRelated = ['properties', 'patternProperties', 'additionalProperties']
 var itemsRelated = ['items', 'additionalItems']
 var schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
@@ -219,42 +266,20 @@ var defaultResolvers = {
       })
     }
 
-    var properties = values.map(s => s.properties)
-    var allProperties = uniq(flattenDeep(properties.map(keys)))
-    var returnObject = {}
-
-    returnObject.additionalProperties = mergeSchemas(values.map(s => s.additionalProperties))
-    var allPatternProps = values.map(function(schema) {
-      return schema.patternProperties
-    })
-
-    var allPatternKeys = uniq(flattenDeep(allPatternProps.map(keys)))
-    returnObject.patternProperties = allPatternKeys.reduce(function(all, patternKey) {
-      var subSchemas = getValues(allPatternProps, patternKey)
-      var compacted = uniqWith(subSchemas.filter(notUndefined), compare)
-      all[patternKey] = mergeSchemas(compacted)
-      return all
-    }, {})
-
-    returnObject.properties = allProperties.reduce(function(all, propKey) {
-      var propSchemas = getValues(properties, propKey)
-      var innerCompacted = uniqWith(propSchemas.filter(notUndefined), compare)
-      all[propKey] = mergeSchemas(innerCompacted, all[propKey] || {}, true)
-      return all
-    }, properties[0] || {})
+    var returnObject = {
+      additionalProperties: mergeSchemas(values.map(s => s.additionalProperties)),
+      patternProperties: mergeSchemaGroup(values.map(s => s.patternProperties), mergeSchemas),
+      properties: mergeSchemaGroup(values.map(s => s.properties), mergeSchemas)
+    }
 
     if (returnObject.additionalProperties === false) {
-      forEach(returnObject.properties, function(schema, prop) {
-        if (schema === false) {
-          delete returnObject.properties[prop]
-        }
-      })
+      removeFalseSchemas(returnObject.properties)
     }
 
     return returnObject
   },
   dependencies(compacted, key, mergeSchemas) {
-    var allChildren = uniq(flattenDeep(compacted.map(keys)))
+    var allChildren = allUniqueKeys(compacted)
 
     return allChildren.reduce(function(all, childKey) {
       var childSchemas = getValues(compacted, childKey)
@@ -276,20 +301,12 @@ var defaultResolvers = {
   items(values, key, mergeSchemas) {
     var items = values.map(s => s.items)
     var itemsCompacted = items.filter(notUndefined)
-
     var returnObject = {}
 
     if (itemsCompacted.every(isSchema)) {
       returnObject.items = mergeSchemas(items)
     } else {
-      var allItems = uniq(flattenDeep(items.map(keys)))
-
-      returnObject.items = allItems.reduce(function(all, index) {
-        var itemSchemas = getItemSchemas(values, index)
-        var innerCompacted = uniqWith(itemSchemas.filter(notUndefined), compare)
-        all[index] = mergeSchemas(innerCompacted)
-        return all
-      }, [])
+      returnObject.items = mergeSchemaGroup(values, mergeSchemas, items)
     }
 
     var schemasAtLastPos
@@ -303,30 +320,17 @@ var defaultResolvers = {
       returnObject.additionalItems = mergeSchemas(schemasAtLastPos)
     }
 
-    if (returnObject.additionalItems === false) {
-      forEach(returnObject.items, function(schema, prop) {
-        if (schema === false) {
-          returnObject.items.splice(prop, 1)
-        }
-      })
+    if (returnObject.additionalItems === false && Array.isArray(returnObject.items)) {
+      removeFalseSchemasFromArray(returnObject.items)
     }
 
     return returnObject
   },
   oneOf(compacted, key, mergeSchemas) {
     var combinations = getAnyOfCombinations(cloneDeep(compacted))
-
-    var result = combinations.map(function(combination) {
-      try {
-        return mergeSchemas(combination)
-      } catch (e) {
-        return undefined
-      }
-    }).filter(notUndefined)
-
+    var result = tryMergeSchemaGroups(combinations, mergeSchemas)
     var unique = uniqWith(result, compare)
 
-    // TODO implement merging to main schema if only one left
     if (unique.length) {
       return unique
     }
@@ -335,18 +339,6 @@ var defaultResolvers = {
     return {
       anyOf: compacted
     }
-  },
-  first(compacted) {
-    return compacted[0]
-  },
-  required(compacted) {
-    return stringArray(compacted)
-  },
-  minLength(compacted) {
-    return Math.max.apply(Math, compacted)
-  },
-  maxLength(compacted) {
-    return Math.min.apply(Math, compacted)
   },
   pattern(compacted, key, mergeSchemas, totalSchemas, reportUnresolved) {
     reportUnresolved(compacted.map(function(regexp) {
@@ -364,12 +356,6 @@ var defaultResolvers = {
     }
     return computeLcm(integers) / factor
   },
-  uniqueItems(compacted) {
-    return compacted.some(isTrue)
-  },
-  examples(compacted) {
-    return uniqWith(flatten(compacted), isEqual)
-  },
   enum(compacted, key) {
     var enums = intersectionWith.apply(null, compacted.concat(isEqual))
     if (enums.length) {
@@ -378,26 +364,32 @@ var defaultResolvers = {
   }
 }
 
-defaultResolvers.$id = defaultResolvers.first
-defaultResolvers.$schema = defaultResolvers.first
-defaultResolvers.$ref = defaultResolvers.first // TODO correct? probably throw
-defaultResolvers.title = defaultResolvers.first
-defaultResolvers.description = defaultResolvers.first
-defaultResolvers.default = defaultResolvers.first
-defaultResolvers.minimum = defaultResolvers.minLength
-defaultResolvers.exclusiveMinimum = defaultResolvers.minLength
-defaultResolvers.minItems = defaultResolvers.minLength
-defaultResolvers.minProperties = defaultResolvers.minLength
-defaultResolvers.maximum = defaultResolvers.maxLength
-defaultResolvers.exclusiveMaximum = defaultResolvers.maxLength
-defaultResolvers.maxItems = defaultResolvers.maxLength
-defaultResolvers.maxProperties = defaultResolvers.maxLength
-defaultResolvers.contains = schemaResolver
+defaultResolvers.$id = first
+defaultResolvers.$ref = first
+defaultResolvers.$schema = first
 defaultResolvers.additionalItems = schemaResolver
-defaultResolvers.anyOf = defaultResolvers.oneOf
 defaultResolvers.additionalProperties = schemaResolver
-defaultResolvers.propertyNames = schemaResolver
+defaultResolvers.anyOf = defaultResolvers.oneOf
+defaultResolvers.contains = schemaResolver
+defaultResolvers.default = first
 defaultResolvers.definitions = defaultResolvers.dependencies
+defaultResolvers.description = first
+defaultResolvers.examples = examples
+defaultResolvers.exclusiveMaximum = minimumValue
+defaultResolvers.exclusiveMinimum = maximumValue
+defaultResolvers.first = first
+defaultResolvers.maximum = minimumValue
+defaultResolvers.maxItems = minimumValue
+defaultResolvers.maxLength = minimumValue
+defaultResolvers.maxProperties = minimumValue
+defaultResolvers.minimum = maximumValue
+defaultResolvers.minItems = maximumValue
+defaultResolvers.minLength = maximumValue
+defaultResolvers.minProperties = maximumValue
+defaultResolvers.propertyNames = schemaResolver
+defaultResolvers.required = required
+defaultResolvers.title = first
+defaultResolvers.uniqueItems = uniqueItems
 
 function merger(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
@@ -427,7 +419,7 @@ function merger(rootSchema, options, totalSchemas) {
     // there are no false and we don't need the true ones as they accept everything
     schemas = schemas.filter(isPlainObject)
 
-    var allKeys = uniq(flattenDeep(schemas.map(keys)))
+    var allKeys = allUniqueKeys(schemas)
 
     if (contains(allKeys, 'allOf')) {
       return merger({
