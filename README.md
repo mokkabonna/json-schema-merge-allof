@@ -102,6 +102,7 @@ mergeAllOf(schema, {
       // resolvers MUST return a value other than undefined
     }
   }
+})
 ```
 
 The function is passed:
