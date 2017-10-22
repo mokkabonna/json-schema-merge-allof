@@ -55,6 +55,7 @@ describe('module', function() {
     expect(result.properties === schema.allOf[1].properties).to.equal(false)
     expect(result.properties.name === schema.allOf[1].properties.name).to.equal(false)
   })
+
   it('combines simple usecase', function() {
     var result = merger({
       allOf: [

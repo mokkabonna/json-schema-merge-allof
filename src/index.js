@@ -16,6 +16,7 @@ var uniqWith = require('lodash/uniqWith')
 var without = require('lodash/without')
 
 var withoutArr = (arr, ...rest) => without.apply(null, [arr].concat(flatten(rest)))
+var normalizeAsArray = (obj) => Array.isArray(obj) ? obj : [obj]
 var isPropertyRelated = (key) => contains(propertyRelated, key)
 var isItemsRelated = (key) => contains(itemsRelated, key)
 var contains = (arr, val) => arr.indexOf(val) !== -1
@@ -353,7 +354,7 @@ var defaultResolvers = {
       anyOf: compacted
     }
   },
-  pattern(compacted, key, mergeSchemas, totalSchemas, reportUnresolved) {
+  pattern(compacted, key, mergeSchemas, reportUnresolved) {
     reportUnresolved(compacted.map(function(regexp) {
       return {
         [key]: regexp
@@ -403,15 +404,14 @@ defaultResolvers.required = required
 defaultResolvers.title = first
 defaultResolvers.uniqueItems = uniqueItems
 
-function merger(rootSchema, options, totalSchemas) {
-  totalSchemas = totalSchemas || []
+function merger(rootSchema, options) {
   options = defaultsDeep(options, {
     ignoreAdditionalProperties: false,
     resolvers: defaultResolvers
   })
 
   function mergeSchemas(schemas) {
-    schemas = cloneDeep(schemas.filter(notUndefined))
+    schemas = cloneDeep(normalizeAsArray(schemas).filter(notUndefined))
 
     // return undefined, an empty schema
     if (!schemas.length) {
@@ -433,9 +433,7 @@ function merger(rootSchema, options, totalSchemas) {
     var allKeys = allUniqueKeys(schemas)
 
     if (contains(allKeys, 'allOf')) {
-      return merger({
-        allOf: schemas
-      }, options, totalSchemas)
+      return mergeSchemas(flattenDeep(schemas.map(s => getAllOf(s))))
     }
 
     var propertyKeys = allKeys.filter(isPropertyRelated)
@@ -454,7 +452,7 @@ function merger(rootSchema, options, totalSchemas) {
       // allOf is treated differently alltogether
       if (compacted.length === 1 && contains(schemaArrays, key)) {
         merged[key] = compacted[0].map(function(schema) {
-          return mergeSchemas([schema])
+          return mergeSchemas(schema)
         })
         // prop groups must always be resolved
       } else if (compacted.length === 1 && !contains(schemaGroupProps, key) && !contains(schemaProps, key)) {
@@ -467,7 +465,7 @@ function merger(rootSchema, options, totalSchemas) {
         }
 
         var calledWithArray = false
-        merged[key] = resolver(compacted, key, mergeSchemas, totalSchemas, function(unresolvedSchemas) {
+        merged[key] = resolver(compacted, key, mergeSchemas, function(unresolvedSchemas) {
           calledWithArray = Array.isArray(unresolvedSchemas)
           return addToAllOf(unresolvedSchemas)
         })
@@ -487,10 +485,7 @@ function merger(rootSchema, options, totalSchemas) {
     return merged
   }
 
-  var copy = cloneDeep(rootSchema)
-  var allSchemas = flattenDeep(getAllOf(copy))
-  var merged = mergeSchemas(allSchemas)
-  return merged
+  return mergeSchemas(rootSchema)
 }
 
 merger.options = {
