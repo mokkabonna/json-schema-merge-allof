@@ -7,6 +7,7 @@ var flattenDeep = require('lodash/flattenDeep')
 var intersection = require('lodash/intersection')
 var intersectionWith = require('lodash/intersectionWith')
 var isEqual = require('lodash/isEqual')
+var isString = require('lodash/isString')
 var isPlainObject = require('lodash/isPlainObject')
 var pullAll = require('lodash/pullAll')
 var sortBy = require('lodash/sortBy')
@@ -153,7 +154,7 @@ function cleanupReturnValue(returnObject) {
   return returnObject
 }
 
-function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options) {
+function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options, totalSchemas) {
   if (keys.length) {
     var resolver = options.resolvers[resolverName]
     if (!resolver) {
@@ -169,7 +170,7 @@ function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options) {
       }, {})
     }).filter(notUndefined), compare)
 
-    var result = resolver(compacted, resolverName, mergeSchemas, options)
+    var result = resolver(compacted, resolverName, mergeSchemas, options, totalSchemas)
 
     if (!isPlainObject(result)) {
       throwIncompatible(compacted, resolverName)
@@ -186,7 +187,7 @@ function mergeSchemaGroup(group, mergeSchemas, source) {
   return allKeys.reduce(function(all, key) {
     var schemas = extractor(group, key)
     var compacted = uniqWith(schemas.filter(notUndefined), compare)
-    all[key] = mergeSchemas(compacted)
+    all[key] = mergeSchemas(compacted, key)
     return all
   }, source ? [] : {})
 }
@@ -241,7 +242,7 @@ var defaultResolvers = {
       }
     }
   },
-  properties(values, key, mergeSchemas, options) {
+  properties(values, key, mergeSchemas, options, totalSchemas) {
     // first get rid of all non permitted properties
     if (!options.ignoreAdditionalProperties) {
       values.forEach(function(subSchema) {
@@ -273,10 +274,16 @@ var defaultResolvers = {
       })
     }
 
+    function createMerger(parentKey) {
+      return function(schemas, key) {
+        return mergeSchemas(schemas, [parentKey].concat(key))
+      }
+    }
+
     var returnObject = {
-      additionalProperties: mergeSchemas(values.map(s => s.additionalProperties)),
-      patternProperties: mergeSchemaGroup(values.map(s => s.patternProperties), mergeSchemas),
-      properties: mergeSchemaGroup(values.map(s => s.properties), mergeSchemas)
+      additionalProperties: mergeSchemas(values.map(s => s.additionalProperties), ['additionalProperties']),
+      patternProperties: mergeSchemaGroup(values.map(s => s.patternProperties), createMerger('patternProperties')),
+      properties: mergeSchemaGroup(values.map(s => s.properties), createMerger('properties'))
     }
 
     if (returnObject.additionalProperties === false) {
@@ -410,8 +417,44 @@ function merger(rootSchema, options) {
     resolvers: defaultResolvers
   })
 
-  function mergeSchemas(schemas) {
-    schemas = cloneDeep(normalizeAsArray(schemas).filter(notUndefined))
+  var totalSchemas = { }
+  var allObjects = { }
+
+  function findCircular(obj, paths) {
+    paths = paths || []
+    var path = paths.join('.')
+    Object.keys(obj).forEach(function(key) {
+      var schema = obj[key]
+      if (!isPlainObject(schema)) {
+        return
+      }
+      var existing = Object.keys(allObjects).find(k => allObjects[k] === schema)
+      if (existing !== undefined) {
+        allObjects[path] = existing
+        totalSchemas[path] = totalSchemas[existing] || {}
+      } else {
+        totalSchemas[path] = {}
+        allObjects[path] = schema
+        if (isPlainObject(schema)) {
+          findCircular(schema, paths.concat(key))
+        }
+      }
+    })
+  }
+
+  findCircular(rootSchema)
+
+  var max = 10000000
+  var current = 0
+  function mergeSchemas(schemas, paths) {
+    paths = paths || []
+    schemas = normalizeAsArray(schemas).filter(notUndefined)
+    schemas = cloneDeep(schemas)
+
+    var path = paths.join('.')
+
+    current++
+    if (current > max) return
 
     // return undefined, an empty schema
     if (!schemas.length) {
@@ -428,20 +471,48 @@ function merger(rootSchema, options) {
 
     // there are no false and we don't need the true ones as they accept everything
     schemas = schemas.filter(isPlainObject)
+    // var previousResult = totalSchemas.find(function(result) {
+    //   return originalSchemas.every(function(schema) {
+    //     return result.schemas.indexOf(schema) !== -1
+    //   })
+    // })
+    //
+    // if (previousResult) {
+    //   console.log('found previous result')
+    //   return previousResult.result
+    // }
 
-    var merged = schemas[0]
+    var found = keys(totalSchemas).find(function(k) {
+      return path.indexOf(k) === 0 && k.indexOf(path) === 0
+    })
+
+    var merged = totalSchemas[path] || {}
+    if (found) {
+      console.log(totalSchemas)
+      return merged
+    }
     var allKeys = allUniqueKeys(schemas)
 
     if (contains(allKeys, 'allOf')) {
-      return mergeSchemas(flattenDeep(schemas.map(s => getAllOf(s))))
+      return mergeSchemas(flattenDeep(schemas.map(s => getAllOf(s))), paths)
+    }
+
+    function createMerger(key) {
+      return function innerMergeSchemas(schemas) {
+        return mergeSchemas(schemas, paths.concat(key))
+      }
     }
 
     var propertyKeys = allKeys.filter(isPropertyRelated)
-    Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, mergeSchemas, options))
+    Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, function(schemas, innerPaths) {
+      return mergeSchemas(schemas, paths.concat(innerPaths))
+    }, options, totalSchemas))
     pullAll(allKeys, propertyKeys)
 
     var itemKeys = allKeys.filter(isItemsRelated)
-    Object.assign(merged, callGroupResolver(itemKeys, 'items', schemas, mergeSchemas, options))
+    Object.assign(merged, callGroupResolver(itemKeys, 'items', schemas, function(schemas, innerPaths) {
+      return mergeSchemas(schemas, paths.concat(innerPaths))
+    }, options))
     pullAll(allKeys, itemKeys)
 
     allKeys.forEach(function(key) {
@@ -452,7 +523,7 @@ function merger(rootSchema, options) {
       // allOf is treated differently alltogether
       if (compacted.length === 1 && contains(schemaArrays, key)) {
         merged[key] = compacted[0].map(function(schema) {
-          return mergeSchemas(schema)
+          return mergeSchemas(schema, paths.concat(key))
         })
         // prop groups must always be resolved
       } else if (compacted.length === 1 && !contains(schemaGroupProps, key) && !contains(schemaProps, key)) {
@@ -465,7 +536,7 @@ function merger(rootSchema, options) {
         }
 
         var calledWithArray = false
-        merged[key] = resolver(compacted, key, mergeSchemas, function(unresolvedSchemas) {
+        merged[key] = resolver(compacted, key, createMerger(key), function(unresolvedSchemas) {
           calledWithArray = Array.isArray(unresolvedSchemas)
           return addToAllOf(unresolvedSchemas)
         })
@@ -485,7 +556,7 @@ function merger(rootSchema, options) {
     return merged
   }
 
-  return mergeSchemas(rootSchema)
+  return mergeSchemas(cloneDeep(rootSchema))
 }
 
 merger.options = {

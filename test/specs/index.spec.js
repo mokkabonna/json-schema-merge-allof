@@ -10,9 +10,9 @@ var ajv = new Ajv()
 function merger(schema, options) {
   var result = mergerModule(schema, options)
   try {
-    if (!ajv.validateSchema(result)) {
-      throw new Error('Schema returned by resolver isn\'t valid.')
-    }
+    // if (!ajv.validateSchema(result)) {
+    //   throw new Error('Schema returned by resolver isn\'t valid.')
+    // }
     return result
   } catch (e) {
     if (!/stack/i.test(e.message)) {
@@ -1392,7 +1392,35 @@ describe('module', function() {
     })
   })
 
-  describe.skip('merging definitions', function() {
+  describe('merging definitions', function() {
+    it('merges circular simple', function() {
+      var schema = {
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 8
+          }
+        }
+      }
+
+      schema.properties.child = schema
+
+      var expected = {
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 8
+          }
+        }
+      }
+
+      expected.properties.child = expected
+
+      var result = merger(schema)
+
+      expect(result).to.eql(expected)
+    })
+
     it('merges circular', function() {
       var schema = {
         properties: {
