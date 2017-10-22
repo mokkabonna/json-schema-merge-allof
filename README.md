@@ -16,8 +16,7 @@ npm install json-schema-compare --save
 - Validates in a way not possible by regular simple meta validators
 - Pluggable keyword resolvers
 - Option to override common impossibility like adding properties when using **additionalProperties: false**
-
-NOT 100% supported yet for resolving items when array and additionalItems present.
+- Supports all JSON schema core/validation keywords
 
 ## How
 
@@ -164,7 +163,7 @@ The library will then throw an error reporting the values that had no valid inte
 
 ## Roadmap
 
-- [ ] Treat the interdependent validations like properties and additionalProperties as one resolver
+- [x] Treat the interdependent validations like properties and additionalProperties as one resolver (and items additionalItems)
 - [ ] Extract repeating validators from anyOf/oneOf and merge them with parent schema
 - [ ] After extraction of validators from anyOf/oneOf, compare them and remove duplicates.
 - [ ] If left with only one in anyOf/oneOf then merge it to the parent schema.
