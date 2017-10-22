@@ -124,7 +124,7 @@ mergeJsonSchema({
 
 **ignoreAdditionalProperties** default **false**
 
-Allows you to combine schema properties even though some schemas have `additionalProperties: false` The resulting schema will still get additionalProperties set to false. This is the most common issue people face when trying to expand schemas using allOf and a limitation of the json schema spec.
+Allows you to combine schema properties even though some schemas have `additionalProperties: false` This is the most common issue people face when trying to expand schemas using allOf and a limitation of the json schema spec. Be aware though that the schema produced will allow more than the original schema. But this is useful if just want to combine schemas using allOf as if additionalProperties wasn't false during the merge process. The resulting schema will still get additionalProperties set to false.
 
 
 ## Resolvers
