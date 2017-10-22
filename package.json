@@ -1,6 +1,6 @@
 {
   "name": "json-schema-merge-allof",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Simplify your schema by combining allOf into the root schema, safely.",
   "main": "src/index.js",
   "scripts": {
