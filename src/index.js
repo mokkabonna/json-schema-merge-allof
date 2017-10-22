@@ -1,4 +1,3 @@
-var Ajv = require('ajv')
 var cloneDeep = require('lodash/cloneDeep')
 var compare = require('json-schema-compare')
 var computeLcm = require('compute-lcm')
@@ -428,7 +427,6 @@ defaultResolvers.definitions = defaultResolvers.dependencies
 
 function merger(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
-  var ajv = new Ajv()
   options = defaults(options, {
     ignoreAdditionalProperties: false,
     resolvers: defaultResolvers
@@ -563,19 +561,6 @@ function merger(rootSchema, options, totalSchemas) {
 
   var allSchemas = flattenDeep(getAllOf(rootSchema))
   var merged = mergeSchemas(allSchemas, rootSchema)
-
-  // TODO consider having this here as a feature or just while developing
-  try {
-    var isValid = ajv.validateSchema(merged)
-
-    if (!isValid) {
-      throw new Error('Schema returned by resolver isn\'t valid.')
-    }
-  } catch (e) {
-    if (!/stack/i.test(e.message)) {
-      throw e
-    }
-  }
 
   return merged
 }
