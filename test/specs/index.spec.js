@@ -749,7 +749,7 @@ describe('module', function() {
       })
     })
 
-    it('merges contains using allOf', function() {
+    it('merges contains', function() {
       var result = merger({
         allOf: [{}, {
           contains: {
@@ -853,7 +853,7 @@ describe('module', function() {
       })
     })
 
-    it('merges multipleOf by finding common lowest number', function() {
+    it('merges multipleOf by finding lowest common multiple (LCM)', function() {
       var result = merger({
         allOf: [{}, {
           multipleOf: 0.2,
