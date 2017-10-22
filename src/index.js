@@ -15,6 +15,18 @@ var uniq = require('lodash/uniq')
 var uniqWith = require('lodash/uniqWith')
 var without = require('lodash/without')
 
+var withoutArr = (arr, ...rest) => without.apply(null, [arr].concat(flatten(rest)))
+var isPropertyRelated = (key) => contains(propertyRelated, key)
+var isItemsRelated = (key) => contains(itemsRelated, key)
+var contains = (arr, val) => arr.indexOf(val) !== -1
+var isEmptySchema = (obj) => (!keys(obj).length) && obj !== false && obj !== true
+var isSchema = (val) => isPlainObject(val) || val === true || val === false
+var isFalse = (val) => val === false
+var isTrue = (val) => val === true
+var schemaResolver = (compacted, key, mergeSchemas, totalSchemas, parent) => mergeSchemas(compacted, compacted[0])
+var stringArray = (values) => sortBy(uniq(flattenDeep(values)))
+var notUndefined = (val) => val !== undefined
+
 function compareProp(key) {
   return function(a, b) {
     return compare({
@@ -78,19 +90,6 @@ function keys(obj) {
   }
 }
 
-function withoutArr(arr) {
-  var rest = flatten([].slice.call(arguments, 1))
-  return without.apply(null, [arr].concat(rest))
-}
-
-function isPropertyRelated(key) {
-  return contains(propertyRelated, key)
-}
-
-function isItemsRelated(key) {
-  return contains(itemsRelated, key)
-}
-
 function getAnyOfCombinations(arrOfArrays, combinations) {
   combinations = combinations || []
   if (!arrOfArrays.length) {
@@ -105,10 +104,6 @@ function getAnyOfCombinations(arrOfArrays, combinations) {
   return getAnyOfCombinations(rest, values.map(item => (item)))
 }
 
-function contains(arr, val) {
-  return arr.indexOf(val) !== -1
-}
-
 function mergeWithArray(base, newItems) {
   if (Array.isArray(base)) {
     base.splice.apply(base, [0, 0].concat(newItems))
@@ -116,22 +111,6 @@ function mergeWithArray(base, newItems) {
   } else {
     return newItems
   }
-}
-
-function isEmptySchema(obj) {
-  return (!keys(obj).length) && obj !== false && obj !== true
-}
-
-function isSchema(val) {
-  return isPlainObject(val) || val === true || val === false
-}
-
-function isFalse(val) {
-  return val === false
-}
-
-function isTrue(val) {
-  return val === true
 }
 
 function throwIncompatible(values, key) {
@@ -142,18 +121,6 @@ function throwIncompatible(values, key) {
     asJSON = values.join(', ')
   }
   throw new Error('Could not resolve values for keyword:"' + key + '". They are probably incompatible. Values: ' + asJSON)
-}
-
-function schemaResolver(compacted, key, mergeSchemas, totalSchemas, parent) {
-  return mergeSchemas(compacted, compacted[0])
-}
-
-function stringArray(values) {
-  return sortBy(uniq(flattenDeep(values)))
-}
-
-function notUndefined(val) {
-  return val !== undefined
 }
 
 var propertyRelated = ['properties', 'patternProperties', 'additionalProperties']
@@ -389,9 +356,7 @@ var defaultResolvers = {
     return computeLcm(integers) / factor
   },
   uniqueItems: function(compacted) {
-    return compacted.some(function(val) {
-      return val === true
-    })
+    return compacted.some(isTrue)
   },
   examples: function(compacted) {
     return uniqWith(flatten(compacted), isEqual)

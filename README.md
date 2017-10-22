@@ -9,14 +9,18 @@ npm install json-schema-compare --save
 ## Features
 
 - **Real** and **safe** merging of schemas combined with **allOf**
+- Takes away all allOf found in the whole schema
 - Lossless in terms of validation rules, merged schema does not validate more or less than original schema
 - Results in a more readable root schema
 - Removes almost all logical impossibilities
 - Throws if no logical intersection is found (your schema would not validate anything from the start)
 - Validates in a way not possible by regular simple meta validators
-- Pluggable keyword resolvers
-- Option to override common impossibility like adding properties when using **additionalProperties: false**
+- Correctly considers additionalProperties, patternProperties and properties as a part of an whole when merging schemas containing those
+- Correctly considers items and additionalItems as a whole when merging schemas containing those
+- Supports merging schemas with items as array and direct schema
 - Supports all JSON schema core/validation keywords
+- Option to override common impossibility like adding properties when using **additionalProperties: false**
+- Pluggable keyword resolvers
 
 ## How
 
@@ -105,7 +109,7 @@ The function is passed:
 - **key** the name of the keyword that caused the resolver to be called (useful if you use the same resolver for multiple keywords)
 - **mergeSchemas** a function you can call that merges an array of schemas
 
-You can set a default resolver that catches any unknown keyword. Let's say you want to use the same strategy as the ones for the meta keywords, to use the first value found. You van accomplish that like this:
+You can set a default resolver that catches any unknown keyword. Let's say you want to use the same strategy as the ones for the meta keywords, to use the first value found. You can accomplish that like this:
 
 ```js
 mergeJsonSchema({
