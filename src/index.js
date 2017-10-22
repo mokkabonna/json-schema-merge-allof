@@ -1,7 +1,7 @@
 var cloneDeep = require('lodash/cloneDeep')
 var compare = require('json-schema-compare')
 var computeLcm = require('compute-lcm')
-var defaults = require('lodash/defaults')
+var defaultsDeep = require('lodash/defaultsDeep')
 var flatten = require('lodash/flatten')
 var flattenDeep = require('lodash/flattenDeep')
 var intersection = require('lodash/intersection')
@@ -405,7 +405,7 @@ defaultResolvers.uniqueItems = uniqueItems
 
 function merger(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
-  options = defaults(options, {
+  options = defaultsDeep(options, {
     ignoreAdditionalProperties: false,
     resolvers: defaultResolvers
   })
