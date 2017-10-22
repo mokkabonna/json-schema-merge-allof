@@ -18,6 +18,7 @@ npm install json-schema-compare --save
 - Correctly considers additionalProperties, patternProperties and properties as a part of an whole when merging schemas containing those
 - Correctly considers items and additionalItems as a whole when merging schemas containing those
 - Supports merging schemas with items as array and direct schema
+- Supports merging dependencies when mixed array and schema
 - Supports all JSON schema core/validation keywords
 - Option to override common impossibility like adding properties when using **additionalProperties: false**
 - Pluggable keyword resolvers
