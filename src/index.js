@@ -473,7 +473,6 @@ function merger(rootSchema, options, totalSchemas) {
           return addToAllOf(unresolvedSchemas)
         })
 
-        // TODO check if addToAllOf was called or not, and throw if undefined returnvalue and not called
         if (merged[key] === undefined && !calledWithArray) {
           throwIncompatible(compacted, key)
         } else if (merged[key] === undefined) {
