@@ -189,7 +189,9 @@ function mergeSchemaGroup(group, mergeSchemas, source) {
   return allKeys.reduce(function(all, key) {
     var schemas = extractor(group, key)
     var compacted = uniqWith(schemas.filter(notUndefined), compare)
+    console.log(compacted, key)
     all[key] = mergeSchemas(compacted, key)
+
     return all
   }, source ? [] : {})
 }
@@ -257,7 +259,7 @@ var defaultResolvers = {
           var keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
           var additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
           additionalKeys.forEach(function(key) {
-            other.properties[key] = mergeSchemas([other.properties[key], subSchema.additionalProperties], [])
+            other.properties[key] = mergeSchemas([other.properties[key], subSchema.additionalProperties], ['properties', key])
           })
         })
       })
@@ -468,7 +470,7 @@ function merger(rootSchema, options) {
   allObjects = pick(allObjects, circularKeys)
 
   console.log(totalSchemas['properties.person'] === totalSchemas['properties.person.properties.child'])
-  var max = 7
+  var max = 30
   var current = 0
   function mergeSchemas(schemas, paths) {
     paths = paths || []
@@ -523,6 +525,7 @@ function merger(rootSchema, options) {
 
     var propertyKeys = allKeys.filter(isPropertyRelated)
     Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, function(schemas, innerPaths) {
+      console.log(paths.concat(innerPaths), schemas)
       return mergeSchemas(schemas, paths.concat(innerPaths))
     }, options, totalSchemas))
     pullAll(allKeys, propertyKeys)
