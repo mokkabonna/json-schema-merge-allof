@@ -7,9 +7,11 @@ var flattenDeep = require('lodash/flattenDeep')
 var intersection = require('lodash/intersection')
 var intersectionWith = require('lodash/intersectionWith')
 var isEqual = require('lodash/isEqual')
+var isString = require('lodash/isString')
 var pick = require('lodash/pick')
 var isPlainObject = require('lodash/isPlainObject')
 var pullAll = require('lodash/pullAll')
+var get = require('lodash/get')
 var sortBy = require('lodash/sortBy')
 var forEach = require('lodash/forEach')
 var uniq = require('lodash/uniq')
@@ -424,6 +426,7 @@ function merger(rootSchema, options) {
   })
 
   var totalSchemas = { }
+  var root = {}
   var allObjects = { }
 
   function findCircular(obj, paths) {
@@ -444,9 +447,10 @@ function merger(rootSchema, options) {
       var existing = Object.keys(allObjects).find(k => allObjects[k] === schema)
       if (existing !== undefined) {
         allObjects[path] = existing
-        totalSchemas[path] = totalSchemas[existing] || {}
+        var current = {}
+        totalSchemas[path] = current
+        totalSchemas[existing] = current
       } else {
-        totalSchemas[path] = {}
         allObjects[path] = schema
         if (isPlainObject(schema)) {
           findCircular(schema, innerPath)
@@ -456,19 +460,14 @@ function merger(rootSchema, options) {
   }
 
   findCircular(rootSchema)
-  console.log(totalSchemas)
-  var circularKeys = Object.keys(totalSchemas).filter(function(key) {
-    return Object.keys(totalSchemas).some(function(innerKey) {
-      return totalSchemas[innerKey] === totalSchemas[key] && key !== innerKey
-    })
+  var circularKeys = Object.keys(allObjects).filter(function(key) {
+    return isString(allObjects[key])
   })
 
-  var firstKey = circularKeys[0]
-
-  totalSchemas = pick(totalSchemas, circularKeys)
-
   console.log(totalSchemas)
-  // console.log(totalSchemas.definitions.person === totalSchemas['properties'].person)
+  allObjects = pick(allObjects, circularKeys)
+
+  console.log(totalSchemas['properties.person'] === totalSchemas['properties.person.properties.child'])
   var max = 7
   var current = 0
   function mergeSchemas(schemas, paths) {
@@ -499,14 +498,14 @@ function merger(rootSchema, options) {
     // there are no false and we don't need the true ones as they accept everything
     schemas = schemas.filter(isPlainObject)
 
-    var found = keys(totalSchemas).filter(function(k) {
-      return k === path && path !== ''
-    })
+    // var found = totalSchemas[path]
 
-    var merged = totalSchemas[path] || {}
-    if (found.length) {
-      console.log('found', path, found)
-      return totalSchemas[found[0]]
+    var merged = totalSchemas[allObjects[path]] || {}
+    if (path === '') {
+      merged = totalSchemas[''] || {}
+    } else if (allObjects[path]) {
+      console.log('found', path, allObjects[path])
+      return totalSchemas[allObjects[path]]
     }
 
     var allKeys = allUniqueKeys(schemas)
