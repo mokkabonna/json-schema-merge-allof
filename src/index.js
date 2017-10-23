@@ -7,7 +7,7 @@ var flattenDeep = require('lodash/flattenDeep')
 var intersection = require('lodash/intersection')
 var intersectionWith = require('lodash/intersectionWith')
 var isEqual = require('lodash/isEqual')
-var isString = require('lodash/isString')
+var pick = require('lodash/pick')
 var isPlainObject = require('lodash/isPlainObject')
 var pullAll = require('lodash/pullAll')
 var sortBy = require('lodash/sortBy')
@@ -255,7 +255,7 @@ var defaultResolvers = {
           var keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
           var additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
           additionalKeys.forEach(function(key) {
-            other.properties[key] = mergeSchemas([other.properties[key], subSchema.additionalProperties])
+            other.properties[key] = mergeSchemas([other.properties[key], subSchema.additionalProperties], [])
           })
         })
       })
@@ -308,14 +308,14 @@ var defaultResolvers = {
         } else {
           var innerSchemas = innerCompacted.filter(isSchema)
           var arrayMetaScheams = innerArrays.map(createRequiredMetaArray)
-          all[childKey] = mergeSchemas(innerSchemas.concat(arrayMetaScheams))
+          all[childKey] = mergeSchemas(innerSchemas.concat(arrayMetaScheams), [childKey])
         }
         return all
       }
 
       innerCompacted = uniqWith(innerCompacted, compare)
 
-      all[childKey] = mergeSchemas(innerCompacted)
+      all[childKey] = mergeSchemas(innerCompacted, [childKey])
       return all
     }, {})
   },
@@ -427,9 +427,16 @@ function merger(rootSchema, options) {
   var allObjects = { }
 
   function findCircular(obj, paths) {
+    if (!paths) {
+      totalSchemas[''] = {}
+      allObjects[''] = obj
+    }
+
     paths = paths || []
-    var path = paths.join('.')
     Object.keys(obj).forEach(function(key) {
+      var innerPath = paths.slice(0)
+      innerPath.push(key)
+      var path = innerPath.join('.')
       var schema = obj[key]
       if (!isPlainObject(schema)) {
         return
@@ -442,14 +449,28 @@ function merger(rootSchema, options) {
         totalSchemas[path] = {}
         allObjects[path] = schema
         if (isPlainObject(schema)) {
-          findCircular(schema, paths.concat(key))
+          findCircular(schema, innerPath)
         }
       }
     })
   }
 
   findCircular(rootSchema)
+  console.log(totalSchemas)
+  var circularKeys = Object.keys(totalSchemas).filter(function(key) {
+    return Object.keys(totalSchemas).some(function(innerKey) {
+      return totalSchemas[innerKey] === totalSchemas[key] && key !== innerKey
+    })
+  })
 
+  var firstKey = circularKeys[0]
+
+  totalSchemas = pick(totalSchemas, circularKeys)
+
+  console.log(totalSchemas)
+  // console.log(totalSchemas.definitions.person === totalSchemas['properties'].person)
+  var max = 7
+  var current = 0
   function mergeSchemas(schemas, paths) {
     paths = paths || []
     schemas = normalizeAsArray(schemas).filter(notUndefined)
@@ -470,33 +491,39 @@ function merger(rootSchema, options) {
       return true
     }
 
+    current++
+    if (current > max) {
+      return
+    }
+
     // there are no false and we don't need the true ones as they accept everything
     schemas = schemas.filter(isPlainObject)
 
-    var found = keys(totalSchemas).find(function(k) {
-      return path.indexOf(k) === 0 && k.indexOf(path) === 0 && k !== ''
+    var found = keys(totalSchemas).filter(function(k) {
+      return k === path && path !== ''
     })
 
     var merged = totalSchemas[path] || {}
-    if (found) {
-      return merged
+    if (found.length) {
+      console.log('found', path, found)
+      return totalSchemas[found[0]]
     }
 
     var allKeys = allUniqueKeys(schemas)
 
     if (contains(allKeys, 'allOf')) {
-      return mergeSchemas(flattenDeep(schemas.map(s => getAllOf(s))), paths.concat(''))
+      return mergeSchemas(flattenDeep(schemas.map(s => getAllOf(s))), paths)
     }
 
     function createMerger(key) {
-      return function innerMergeSchemas(schemas) {
-        return mergeSchemas(schemas, paths.concat(key))
+      return function innerMergeSchemas(schemas, additionalKeys) {
+        additionalKeys = Array.isArray(additionalKeys) ? additionalKeys : []
+        return mergeSchemas(schemas, paths.concat(key).concat(additionalKeys))
       }
     }
 
     var propertyKeys = allKeys.filter(isPropertyRelated)
     Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, function(schemas, innerPaths) {
-      console.log(paths, innerPaths)
       return mergeSchemas(schemas, paths.concat(innerPaths))
     }, options, totalSchemas))
     pullAll(allKeys, propertyKeys)

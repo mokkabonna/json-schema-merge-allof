@@ -1393,7 +1393,7 @@ describe('module', function() {
   })
 
   describe('merging definitions', function() {
-    it('merges circular simple', function() {
+    it.only('merges circular simple', function() {
       var schema = {
         properties: {
           name: {
@@ -1421,7 +1421,7 @@ describe('module', function() {
       expect(result).to.eql(expected)
     })
 
-    it('merges circular', function() {
+    it.only('merges circular', function() {
       var schema = {
         properties: {
           person: {
