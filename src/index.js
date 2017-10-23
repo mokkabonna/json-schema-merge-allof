@@ -189,9 +189,7 @@ function mergeSchemaGroup(group, mergeSchemas, source) {
   return allKeys.reduce(function(all, key) {
     var schemas = extractor(group, key)
     var compacted = uniqWith(schemas.filter(notUndefined), compare)
-    console.log(compacted, key)
     all[key] = mergeSchemas(compacted, key)
-
     return all
   }, source ? [] : {})
 }
@@ -259,7 +257,7 @@ var defaultResolvers = {
           var keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
           var additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
           additionalKeys.forEach(function(key) {
-            other.properties[key] = mergeSchemas([other.properties[key], subSchema.additionalProperties], ['properties', key])
+            other.properties[key] = mergeSchemas([other.properties[key], subSchema.additionalProperties], [])
           })
         })
       })
@@ -466,10 +464,10 @@ function merger(rootSchema, options) {
     return isString(allObjects[key])
   })
 
-  console.log(totalSchemas)
+  // console.log(totalSchemas)
   allObjects = pick(allObjects, circularKeys)
 
-  console.log(totalSchemas['properties.person'] === totalSchemas['properties.person.properties.child'])
+  // console.log(totalSchemas['properties.person'] === totalSchemas['properties.person.properties.child'])
   var max = 30
   var current = 0
   function mergeSchemas(schemas, paths) {
@@ -502,19 +500,21 @@ function merger(rootSchema, options) {
 
     // var found = totalSchemas[path]
 
-    var merged = totalSchemas[allObjects[path]] || {}
-    if (path === '') {
-      merged = totalSchemas[''] || {}
-    } else if (allObjects[path]) {
-      console.log('found', path, allObjects[path])
-      return totalSchemas[allObjects[path]]
-    }
-
     var allKeys = allUniqueKeys(schemas)
 
     if (contains(allKeys, 'allOf')) {
       return mergeSchemas(flattenDeep(schemas.map(s => getAllOf(s))), paths)
     }
+
+    var merged = totalSchemas[allObjects[path]] || {}
+    if (path === '') {
+      merged = totalSchemas[''] || {}
+    } else if (allObjects[path]) {
+      console.log('found', path, allObjects[path], totalSchemas[allObjects[path]])
+      return totalSchemas[allObjects[path]]
+    }
+
+    console.log(path)
 
     function createMerger(key) {
       return function innerMergeSchemas(schemas, additionalKeys) {
@@ -525,7 +525,6 @@ function merger(rootSchema, options) {
 
     var propertyKeys = allKeys.filter(isPropertyRelated)
     Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, function(schemas, innerPaths) {
-      console.log(paths.concat(innerPaths), schemas)
       return mergeSchemas(schemas, paths.concat(innerPaths))
     }, options, totalSchemas))
     pullAll(allKeys, propertyKeys)
