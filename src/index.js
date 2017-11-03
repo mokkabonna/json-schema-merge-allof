@@ -440,11 +440,9 @@ function merger(rootSchema, options, totalSchemas) {
     }
 
     var propertyKeys = allKeys.filter(isPropertyRelated)
-    Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, mergeSchemas, options))
     pullAll(allKeys, propertyKeys)
 
     var itemKeys = allKeys.filter(isItemsRelated)
-    Object.assign(merged, callGroupResolver(itemKeys, 'items', schemas, mergeSchemas, options))
     pullAll(allKeys, itemKeys)
 
     allKeys.forEach(function(key) {
@@ -480,6 +478,9 @@ function merger(rootSchema, options, totalSchemas) {
         }
       }
     })
+
+    Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, mergeSchemas, options))
+    Object.assign(merged, callGroupResolver(itemKeys, 'items', schemas, mergeSchemas, options))
 
     function addToAllOf(unresolvedSchemas) {
       merged.allOf = mergeWithArray(merged.allOf, unresolvedSchemas)
