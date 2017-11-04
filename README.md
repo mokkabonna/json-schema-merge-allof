@@ -91,13 +91,17 @@ Regular expressions does not have an AND operator, only OR.
 When multiple conflicting **not** values are found, we also use the approach that pattern use, but instead of allOf we use anyOf. When extraction of common rules from anyOf is in place this can be further simplified.
 
 ## Options
+**ignoreAdditionalProperties** default **false**
+
+Allows you to combine schema properties even though some schemas have `additionalProperties: false` This is the most common issue people face when trying to expand schemas using allOf and a limitation of the json schema spec. Be aware though that the schema produced will allow more than the original schema. But this is useful if just want to combine schemas using allOf as if additionalProperties wasn't false during the merge process. The resulting schema will still get additionalProperties set to false.
+
 **resolvers** Object
 Override any default resolver like this:
 
 ```js
 mergeAllOf(schema, {
   resolvers: {
-    title: function(values, key, mergeSchemas) {
+    title: function(values, path, mergeSchemas, options) {
       // choose what title you want to be used based on the conflicting values
       // resolvers MUST return a value other than undefined
     }
@@ -107,10 +111,38 @@ mergeAllOf(schema, {
 
 The function is passed:
 
-- **values**: an array of the conflicting values that need to be resolved
-- **key** the name of the keyword that caused the resolver to be called (useful if you use the same resolver for multiple keywords)
+- **values** an array of the conflicting values that need to be resolved
+- **path** an array of strings containing the path to the position in the schema that caused the resolver to be called (useful if you use the same resolver for multiple keywords, or want to implement specific logic for custom paths)
 - **mergeSchemas** a function you can call that merges an array of schemas
+- **options** the options mergeAllOf was called with
 
+
+### Combined resolvers
+No separate resolver is called for patternProperties and additionalProperties, only the properties resolver is called. Same for additionalItems, only items resolver is called. This is because those keywords need to be resolved together as they affect each other.
+
+Those two resolvers are expected to return an object containing the resolved values of all the associated keywords. The keys must be the name of the keywords. So the properties resolver need to return an object like this containing the resolved values for each keyword:
+
+```js
+{
+    properties: ...,
+    patternProperties: ...,
+    additionalProperties: ...,
+}
+```
+
+Also the resolve function is not passed **mergeSchemas**, but an object **mergers** that contains mergers for each of the related keywords. So properties get passed an object like this:
+
+```js
+var mergers = {
+    properties: function mergeSchemas(schemas, childSchemaName){...},
+    patternProperties: function mergeSchemas(schemas, childSchemaName){...},
+    additionalProperties: function mergeSchemas(schemas){...},
+}
+```
+
+Some of the mergers requires you to supply a string of the name or index of the subschema you are currently merging. This is to make sure the path passed to child resolvers are correct.
+
+### Default resolver
 You can set a default resolver that catches any unknown keyword. Let's say you want to use the same strategy as the ones for the meta keywords, to use the first value found. You can accomplish that like this:
 
 ```js
@@ -122,10 +154,6 @@ mergeJsonSchema({
   }
 })
 ```
-
-**ignoreAdditionalProperties** default **false**
-
-Allows you to combine schema properties even though some schemas have `additionalProperties: false` This is the most common issue people face when trying to expand schemas using allOf and a limitation of the json schema spec. Be aware though that the schema produced will allow more than the original schema. But this is useful if just want to combine schemas using allOf as if additionalProperties wasn't false during the merge process. The resulting schema will still get additionalProperties set to false.
 
 
 ## Resolvers

@@ -40,9 +40,7 @@ function compareProp(key) {
   return function(a, b) {
     return compare({
       [key]: a
-    }, {
-      [key]: b
-    })
+    }, {[key]: b})
   }
 }
 
@@ -66,7 +64,9 @@ function getValues(schemas, key) {
 
 function getItemSchemas(subSchemas, key) {
   return subSchemas.map(function(sub) {
-    if (!sub) return
+    if (!sub) {
+      return
+    }
 
     if (Array.isArray(sub.items)) {
       var schemaAtPos = sub.items[key]
@@ -82,9 +82,9 @@ function getItemSchemas(subSchemas, key) {
 }
 
 function tryMergeSchemaGroups(schemaGroups, mergeSchemas) {
-  return schemaGroups.map(function(schemas) {
+  return schemaGroups.map(function(schemas, index) {
     try {
-      return mergeSchemas(schemas)
+      return mergeSchemas(schemas, index)
     } catch (e) {
       return undefined
     }
@@ -93,7 +93,9 @@ function tryMergeSchemaGroups(schemaGroups, mergeSchemas) {
 
 function getAdditionalSchemas(subSchemas) {
   return subSchemas.map(function(sub) {
-    if (!sub) return
+    if (!sub) {
+      return
+    }
     if (Array.isArray(sub.items)) {
       return sub.additionalItems
     }
@@ -132,14 +134,16 @@ function mergeWithArray(base, newItems) {
   }
 }
 
-function throwIncompatible(values, key) {
+function throwIncompatible(values, paths) {
   var asJSON
   try {
-    asJSON = JSON.stringify(values, null, 2)
+    asJSON = values.map(function(val) {
+      return JSON.stringify(val, null, 2)
+    }).join('\n')
   } catch (variable) {
     asJSON = values.join(', ')
   }
-  throw new Error('Could not resolve values for keyword:"' + key + '". They are probably incompatible. Values: ' + asJSON)
+  throw new Error('Could not resolve values for path:"' + paths.join('.') + '". They are probably incompatible. Values: \n' + asJSON)
 }
 
 function cleanupReturnValue(returnObject) {
@@ -152,7 +156,17 @@ function cleanupReturnValue(returnObject) {
   return returnObject
 }
 
-function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options) {
+function createRequiredSubMerger(mergeSchemas, key, parents) {
+  return function(schemas, subKey) {
+    if (subKey === undefined) {
+      throw new Error('You need to call merger with a key for the property name or index if array.')
+    }
+    subKey = String(subKey)
+    return mergeSchemas(schemas, null, parents.concat(key, subKey))
+  }
+}
+
+function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options, parents) {
   if (keys.length) {
     var resolver = options.resolvers[resolverName]
     if (!resolver) {
@@ -168,10 +182,32 @@ function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options) {
       }, {})
     }).filter(notUndefined), compare)
 
-    var result = resolver(compacted, resolverName, mergeSchemas, options)
+    var related = resolverName === 'properties'
+      ? propertyRelated
+      : itemsRelated
+
+    var mergers = related.reduce(function(all, key) {
+      if (contains(schemaGroupProps, key)) {
+        all[key] = createRequiredSubMerger(mergeSchemas, key, parents)
+      } else {
+        all[key] = function(schemas) {
+          return mergeSchemas(schemas, null, parents.concat(key))
+        }
+      }
+      return all
+    }, {})
+
+    if (resolverName === 'items') {
+      mergers.itemsArray = createRequiredSubMerger(mergeSchemas, 'items', parents)
+      mergers.items = function(schemas) {
+        return mergeSchemas(schemas, null, parents.concat('items'))
+      }
+    }
+
+    var result = resolver(compacted, parents.concat(resolverName), mergers, options)
 
     if (!isPlainObject(result)) {
-      throwIncompatible(compacted, resolverName)
+      throwIncompatible(compacted, parents.concat(resolverName))
     }
 
     return cleanupReturnValue(result)
@@ -181,13 +217,17 @@ function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options) {
 // Provide source when array
 function mergeSchemaGroup(group, mergeSchemas, source) {
   var allKeys = allUniqueKeys(source || group)
-  var extractor = source ? getItemSchemas : getValues
+  var extractor = source
+    ? getItemSchemas
+    : getValues
   return allKeys.reduce(function(all, key) {
     var schemas = extractor(group, key)
     var compacted = uniqWith(schemas.filter(notUndefined), compare)
-    all[key] = mergeSchemas(compacted)
+    all[key] = mergeSchemas(compacted, key)
     return all
-  }, source ? [] : {})
+  }, source
+    ? []
+    : {})
 }
 
 function removeFalseSchemas(target) {
@@ -207,9 +247,7 @@ function removeFalseSchemasFromArray(target) {
 }
 
 function createRequiredMetaArray(arr) {
-  return {
-    required: arr
-  }
+  return {required: arr}
 }
 
 var propertyRelated = ['properties', 'patternProperties', 'additionalProperties']
@@ -226,10 +264,12 @@ var schemaProps = [
 ]
 
 var defaultResolvers = {
-  type(compacted, key) {
+  type(compacted) {
     if (compacted.some(Array.isArray)) {
       var normalized = compacted.map(function(val) {
-        return Array.isArray(val) ? val : [val]
+        return Array.isArray(val)
+          ? val
+          : [val]
       })
       var common = intersection.apply(null, normalized)
 
@@ -240,7 +280,7 @@ var defaultResolvers = {
       }
     }
   },
-  properties(values, key, mergeSchemas, options) {
+  properties(values, key, mergers, options) {
     // first get rid of all non permitted properties
     if (!options.ignoreAdditionalProperties) {
       values.forEach(function(subSchema) {
@@ -253,7 +293,9 @@ var defaultResolvers = {
           var keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
           var additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
           additionalKeys.forEach(function(key) {
-            other.properties[key] = mergeSchemas([other.properties[key], subSchema.additionalProperties])
+            other.properties[key] = mergers.properties([
+              other.properties[key], subSchema.additionalProperties
+            ], key)
           })
         })
       })
@@ -273,9 +315,9 @@ var defaultResolvers = {
     }
 
     var returnObject = {
-      additionalProperties: mergeSchemas(values.map(s => s.additionalProperties)),
-      patternProperties: mergeSchemaGroup(values.map(s => s.patternProperties), mergeSchemas),
-      properties: mergeSchemaGroup(values.map(s => s.properties), mergeSchemas)
+      additionalProperties: mergers.additionalProperties(values.map(s => s.additionalProperties)),
+      patternProperties: mergeSchemaGroup(values.map(s => s.patternProperties), mergers.patternProperties),
+      properties: mergeSchemaGroup(values.map(s => s.properties), mergers.properties)
     }
 
     if (returnObject.additionalProperties === false) {
@@ -284,7 +326,7 @@ var defaultResolvers = {
 
     return returnObject
   },
-  dependencies(compacted, key, mergeSchemas) {
+  dependencies(compacted, paths, mergeSchemas) {
     var allChildren = allUniqueKeys(compacted)
 
     return allChildren.reduce(function(all, childKey) {
@@ -300,26 +342,26 @@ var defaultResolvers = {
         } else {
           var innerSchemas = innerCompacted.filter(isSchema)
           var arrayMetaScheams = innerArrays.map(createRequiredMetaArray)
-          all[childKey] = mergeSchemas(innerSchemas.concat(arrayMetaScheams))
+          all[childKey] = mergeSchemas(innerSchemas.concat(arrayMetaScheams), childKey)
         }
         return all
       }
 
       innerCompacted = uniqWith(innerCompacted, compare)
 
-      all[childKey] = mergeSchemas(innerCompacted)
+      all[childKey] = mergeSchemas(innerCompacted, childKey)
       return all
     }, {})
   },
-  items(values, key, mergeSchemas) {
+  items(values, paths, mergers) {
     var items = values.map(s => s.items)
     var itemsCompacted = items.filter(notUndefined)
     var returnObject = {}
 
     if (itemsCompacted.every(isSchema)) {
-      returnObject.items = mergeSchemas(items)
+      returnObject.items = mergers.items(items)
     } else {
-      returnObject.items = mergeSchemaGroup(values, mergeSchemas, items)
+      returnObject.items = mergeSchemaGroup(values, mergers.itemsArray, items)
     }
 
     var schemasAtLastPos
@@ -330,7 +372,7 @@ var defaultResolvers = {
     }
 
     if (schemasAtLastPos) {
-      returnObject.additionalItems = mergeSchemas(schemasAtLastPos)
+      returnObject.additionalItems = mergers.additionalItems(schemasAtLastPos)
     }
 
     if (returnObject.additionalItems === false && Array.isArray(returnObject.items)) {
@@ -339,7 +381,7 @@ var defaultResolvers = {
 
     return returnObject
   },
-  oneOf(compacted, key, mergeSchemas) {
+  oneOf(compacted, paths, mergeSchemas) {
     var combinations = getAnyOfCombinations(cloneDeep(compacted))
     var result = tryMergeSchemaGroups(combinations, mergeSchemas)
     var unique = uniqWith(result, compare)
@@ -349,15 +391,12 @@ var defaultResolvers = {
     }
   },
   not(compacted) {
-    return {
-      anyOf: compacted
-    }
+    return {anyOf: compacted}
   },
-  pattern(compacted, key, mergeSchemas, totalSchemas, reportUnresolved) {
+  pattern(compacted, paths, mergeSchemas, options, reportUnresolved) {
+    var key = paths.pop()
     reportUnresolved(compacted.map(function(regexp) {
-      return {
-        [key]: regexp
-      }
+      return {[key]: regexp}
     }))
   },
   multipleOf(compacted) {
@@ -369,7 +408,7 @@ var defaultResolvers = {
     }
     return computeLcm(integers) / factor
   },
-  enum(compacted, key) {
+  enum(compacted) {
     var enums = intersectionWith.apply(null, compacted.concat(isEqual))
     if (enums.length) {
       return sortBy(enums)
@@ -410,10 +449,12 @@ function merger(rootSchema, options, totalSchemas) {
     resolvers: defaultResolvers
   })
 
-  function mergeSchemas(schemas, base) {
+  function mergeSchemas(schemas, base, parents) {
     schemas = cloneDeep(schemas.filter(notUndefined))
+    parents = parents || []
     var merged = isPlainObject(base)
-      ? base : {}
+      ? base
+      : {}
 
     // return undefined, an empty schema
     if (!schemas.length) {
@@ -465,22 +506,32 @@ function merger(rootSchema, options, totalSchemas) {
           throw new Error('No resolver found for key ' + key + '. You can provide a resolver for this keyword in the options, or provide a default resolver.')
         }
 
+        var merger
+        // get custom merger for groups
+        if (contains(schemaGroupProps, key) || contains(schemaArrays, key)) {
+          merger = createRequiredSubMerger(mergeSchemas, key, parents)
+        } else {
+          merger = function(schemas) {
+            return mergeSchemas(schemas, null, parents.concat(key))
+          }
+        }
+
         var calledWithArray = false
-        merged[key] = resolver(compacted, key, mergeSchemas, totalSchemas, function(unresolvedSchemas) {
+        merged[key] = resolver(compacted, parents.concat(key), merger, options, function(unresolvedSchemas) {
           calledWithArray = Array.isArray(unresolvedSchemas)
           return addToAllOf(unresolvedSchemas)
         })
 
         if (merged[key] === undefined && !calledWithArray) {
-          throwIncompatible(compacted, key)
+          throwIncompatible(compacted, parents.concat(key))
         } else if (merged[key] === undefined) {
           delete merged[key]
         }
       }
     })
 
-    Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, mergeSchemas, options))
-    Object.assign(merged, callGroupResolver(itemKeys, 'items', schemas, mergeSchemas, options))
+    Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, mergeSchemas, options, parents))
+    Object.assign(merged, callGroupResolver(itemKeys, 'items', schemas, mergeSchemas, options, parents))
 
     function addToAllOf(unresolvedSchemas) {
       merged.allOf = mergeWithArray(merged.allOf, unresolvedSchemas)
