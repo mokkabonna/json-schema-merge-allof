@@ -777,11 +777,7 @@ describe('module', function() {
           properties: {
             name: {
               type: 'string',
-              allOf: [{
-                pattern: 'bar'
-              }, {
-                pattern: 'foo'
-              }]
+              pattern: '(?=bar)(?=foo)'
             }
           }
         }
@@ -798,11 +794,7 @@ describe('module', function() {
       })
 
       expect(result).to.eql({
-        allOf: [{
-          pattern: 'fdsaf'
-        }, {
-          pattern: 'abba'
-        }]
+        pattern: '(?=fdsaf)(?=abba)'
       })
 
       var result2 = merger({
