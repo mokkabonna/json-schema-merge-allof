@@ -69,23 +69,6 @@ As you can see above the strategy is to choose the **most** restrictive of the s
 
 What you are left with is a schema completely free of allOf. Except for in a couple of values that are impossible to properly intersect/combine:
 
-### pattern
-
-If a schema have the pattern keyword and we have a conflict, then we need to leave that expressed like this:
-
-```js
-{
-  type: 'string',
-  allOf: [{
-    pattern: '\\w+\\s\\w+'
-  }, {
-    pattern: '123$'
-  }]
-}
-```
-
-Regular expressions does not have an AND operator, only OR.
-
 ### not
 
 When multiple conflicting **not** values are found, we also use the approach that pattern use, but instead of allOf we use anyOf. When extraction of common rules from anyOf is in place this can be further simplified.

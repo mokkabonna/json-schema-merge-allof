@@ -40,11 +40,7 @@ describe('items', function() {
         properties: {
           name: {
             type: 'string',
-            allOf: [{
-              pattern: 'bar'
-            }, {
-              pattern: 'foo'
-            }]
+            pattern: '(?=bar)(?=foo)'
           }
         }
       }

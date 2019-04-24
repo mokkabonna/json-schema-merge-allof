@@ -393,11 +393,8 @@ var defaultResolvers = {
   not(compacted) {
     return {anyOf: compacted}
   },
-  pattern(compacted, paths, mergeSchemas, options, reportUnresolved) {
-    var key = paths.pop()
-    reportUnresolved(compacted.map(function(regexp) {
-      return {[key]: regexp}
-    }))
+  pattern(compacted) {
+    return compacted.map(r => '(?=' + r + ')').join('')
   },
   multipleOf(compacted) {
     var integers = compacted.slice(0)
