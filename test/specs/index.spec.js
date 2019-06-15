@@ -57,6 +57,14 @@ describe('module', function() {
     })
   })
 
+  it('handles non-array allOf', function() {
+    var result = merger({
+      allOf: {}
+    })
+
+    expect(result).to.eql({})
+  })
+
   describe('simple resolve functionality', function() {
     it('merges with default resolver if not defined resolver', function() {
       var result = merger({

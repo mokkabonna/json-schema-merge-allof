@@ -52,6 +52,7 @@ function getAllOf(schema) {
       return getAllOf(allSchema)
     }))
   } else {
+    delete schema.allOf
     return [schema]
   }
 }
