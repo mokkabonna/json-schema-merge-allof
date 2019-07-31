@@ -134,4 +134,62 @@ describe('options', function() {
       foo: 7
     })
   })
+
+  it('merges deep by default', function() {
+    var result = merger({
+      allOf: [{
+        properties: {
+          foo: {type: 'string'},
+          bar: {
+            allOf: [{
+              properties: {
+                baz: {type: 'string'}
+              }
+            }]
+          }
+        }
+      }]
+    })
+
+    expect(result).to.eql({
+      properties: {
+        foo: {type: 'string'},
+        bar: {
+          properties: {
+            baz: {type: 'string'}
+          }
+        }
+      }
+    })
+  })
+
+  it('doesn\'t merge deep when deep is false', function() {
+    var result = merger({
+      allOf: [{
+        properties: {
+          foo: {type: 'string'},
+          bar: {
+            allOf: [{
+              properties: {
+                baz: {type: 'string'}
+              }
+            }]
+          }
+        }
+      }]
+    }, {deep: false})
+
+    expect(result).to.eql({
+      properties: {
+        foo: {type: 'string'},
+        bar: {
+          allOf: [{
+            properties: {
+              baz: {type: 'string'}
+            }
+          }]
+        }
+      }
+    })
+  })
 })

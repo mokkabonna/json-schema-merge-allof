@@ -92,6 +92,11 @@ mergeAllOf(schema, {
 })
 ```
 
+**deep** boolean, default *true*
+If false, resolves only the top-level `allOf` keyword in the schema.
+
+If true, resolves all `allOf` keywords in the schema.
+
 The function is passed:
 
 - **values** an array of the conflicting values that need to be resolved
