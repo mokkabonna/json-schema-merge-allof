@@ -21,6 +21,64 @@ function merger(schema, options) {
 }
 
 describe('module', function() {
+  it('merges schema with same object reference multiple places', () => {
+    var commonSchema = {
+      allOf: [{
+        properties: {
+          test: true
+        }
+      }]
+    }
+    var result = merger({
+      properties: {
+        list: {
+          items: commonSchema
+        }
+      },
+      allOf: [commonSchema]
+    })
+
+    expect(result).to.eql({
+      properties: {
+        list: {
+          items: {
+            properties: {
+              test: true
+            }
+          }
+        },
+        test: true
+      }
+    })
+  })
+
+  it('does not alter original schema', () => {
+    var schema = {
+      allOf: [{
+        properties: {
+          test: true
+        }
+      }]
+    }
+
+    var result = merger(schema)
+
+    expect(result).to.eql({
+      properties: {
+        test: true
+      }
+    })
+
+    expect(result).not.to.equal(schema) // not strict equal (identity)
+    expect(schema).to.eql({
+      allOf: [{
+        properties: {
+          test: true
+        }
+      }]
+    })
+  })
+
   it('combines simple usecase', function() {
     var result = merger({
       allOf: [{
