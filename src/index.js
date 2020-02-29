@@ -45,21 +45,13 @@ function compareProp(key) {
 }
 
 function getAllOf(schema) {
-  if (Array.isArray(schema.allOf)) {
-    var allOf = schema.allOf
-    delete schema.allOf
-    return [schema].concat(allOf.map(function(allSchema) {
-      return getAllOf(allSchema)
-    }))
-  } else {
-    return [schema]
-  }
+  let { allOf = [], ...copy } = schema
+  copy = isPlainObject(schema) ? copy : schema // if schema is boolean
+  return [copy, ...allOf.map(getAllOf)]
 }
 
 function getValues(schemas, key) {
-  return schemas.map(function(schema) {
-    return schema && schema[key]
-  })
+  return schemas.map(schema => schema && schema[key])
 }
 
 function getItemSchemas(subSchemas, key) {
@@ -538,7 +530,7 @@ function merger(rootSchema, options, totalSchemas) {
   }
 
   var allSchemas = flattenDeep(getAllOf(rootSchema))
-  var merged = mergeSchemas(allSchemas, rootSchema)
+  var merged = mergeSchemas(allSchemas)
 
   return merged
 }

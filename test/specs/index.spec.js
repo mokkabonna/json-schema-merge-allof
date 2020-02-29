@@ -1,6 +1,7 @@
 var chai = require('chai')
 var mergerModule = require('../../src')
 var Ajv = require('ajv')
+var _ = require('lodash')
 var $RefParser = require('json-schema-ref-parser')
 
 var expect = chai.expect
@@ -21,6 +22,101 @@ function merger(schema, options) {
 }
 
 describe('module', function() {
+  it('merges schema with same object reference multiple places', () => {
+    var commonSchema = {
+      allOf: [{
+        properties: {
+          test: true
+        }
+      }]
+    }
+    var result = merger({
+      properties: {
+        list: {
+          items: commonSchema
+        }
+      },
+      allOf: [commonSchema]
+    })
+
+    expect(result).to.eql({
+      properties: {
+        list: {
+          items: {
+            properties: {
+              test: true
+            }
+          }
+        },
+        test: true
+      }
+    })
+  })
+
+  it('does not alter original schema', () => {
+    var schema = {
+      allOf: [{
+        properties: {
+          test: true
+        }
+      }]
+    }
+
+    var result = merger(schema)
+
+    expect(result).to.eql({
+      properties: {
+        test: true
+      }
+    })
+
+    expect(result).not.to.equal(schema) // not strict equal (identity)
+    expect(schema).to.eql({
+      allOf: [{
+        properties: {
+          test: true
+        }
+      }]
+    })
+  })
+
+  it('does not use any original objects or arrays', () => {
+    const schema = {
+      properties: {
+        arr: {
+          type: 'array',
+          items: {
+            type: 'object'
+          },
+          additionalItems: [{
+            type: 'array'
+          }]
+        }
+      },
+      allOf: [{
+        properties: {
+          test: true
+        }
+      }]
+    }
+
+    function innerDeconstruct(schema) {
+      const allChildObj = Object.entries(schema).map(([key, val]) => {
+        if (_.isObject(val)) return innerDeconstruct(val)
+      })
+      return [schema, ..._.flatten(allChildObj)]
+    }
+
+    const getAllObjects = schema => _(innerDeconstruct(schema)).compact().value()
+    const inputObjects = getAllObjects(schema)
+
+    const result = merger(schema)
+    const resultObjects = getAllObjects(result)
+
+    const commonObjects = _.intersection(inputObjects, resultObjects)
+    expect(commonObjects).to.have.length(0)
+  })
+
   it('combines simple usecase', function() {
     var result = merger({
       allOf: [{
