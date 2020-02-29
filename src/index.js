@@ -435,7 +435,8 @@ function merger(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
   options = defaultsDeep(options, {
     ignoreAdditionalProperties: false,
-    resolvers: defaultResolvers
+    resolvers: defaultResolvers,
+    deep: true
   })
 
   function mergeSchemas(schemas, base, parents) {
@@ -462,8 +463,7 @@ function merger(rootSchema, options, totalSchemas) {
     schemas = schemas.filter(isPlainObject)
 
     var allKeys = allUniqueKeys(schemas)
-
-    if (contains(allKeys, 'allOf')) {
+    if (options.deep && contains(allKeys, 'allOf')) {
       return merger({
         allOf: schemas
       }, options, totalSchemas)
