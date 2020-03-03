@@ -19,7 +19,7 @@ npm install json-schema-merge-allof --save
 - Correctly considers items and additionalItems as a whole when merging schemas containing those
 - Supports merging schemas with items as array and direct schema
 - Supports merging dependencies when mixed array and schema
-- Supports all JSON schema core/validation keywords
+- Supports all JSON schema core/validation keywords (v6, use custom resolvers to support other keywords)
 - Option to override common impossibility like adding properties when using **additionalProperties: false**
 - Pluggable keyword resolvers
 
