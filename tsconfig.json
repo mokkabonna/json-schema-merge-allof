@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "alwaysStrict": true,
+    "declaration": true,
+    "declarationDir": "dist",
+    "downlevelIteration": true,
+    "esModuleInterop": true,
+    "inlineSourceMap": false,
+    "sourceMap": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "outDir": "src",
+    "rootDir": "src",
+    "target": "es2018",
+    "composite": true,
+    "importsNotUsedAsValues": "error"
+  },
+  "exclude": ["dist/**", "test/**"]
+}

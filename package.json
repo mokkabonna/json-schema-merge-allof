@@ -2,52 +2,69 @@
   "name": "json-schema-merge-allof",
   "version": "0.6.0",
   "description": "Simplify your schema by combining allOf into the root schema, safely.",
-  "main": "src/index.js",
-  "scripts": {
-    "eslint": "eslint src test",
-    "test": "npm run eslint && nyc --reporter=html --reporter=text mocha test/specs",
-    "develop": "mocha test/specs --recursive --watch",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
-  },
-  "directories": {
-    "lib": "src",
-    "test": "test"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mokkabonna/json-schema-merge-allof.git"
-  },
   "keywords": [
     "json",
     "schema",
     "jsonschema"
   ],
-  "author": "Martin Hansen",
-  "license": "MIT",
+  "homepage": "https://github.com/mokkabonna/json-schema-merge-allof#readme",
   "bugs": {
     "url": "https://github.com/mokkabonna/json-schema-merge-allof/issues"
   },
-  "homepage": "https://github.com/mokkabonna/json-schema-merge-allof#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mokkabonna/json-schema-merge-allof.git"
+  },
+  "license": "MIT",
+  "author": "Martin Hansen",
+  "main": "src/index.js",
+  "directories": {
+    "lib": "src",
+    "test": "test"
+  },
+  "scripts": {
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "develop": "mocha test/specs --recursive --watch",
+    "eslint": "eslint src",
+    "pretest": "tsc",
+    "test": "npm run eslint && nyc --reporter=html --reporter=text mocha test/specs"
+  },
+  "dependencies": {
+    "@types/json-schema-compare": "^0.2.0",
+    "@types/lodash": "^4.14.162",
+    "compute-lcm": "^1.1.0",
+    "json-schema-compare": "^0.2.2",
+    "lodash": "^4.17.20"
+  },
   "devDependencies": {
-    "ajv": "^5.2.3",
-    "chai": "^4.1.2",
-    "coveralls": "^3.0.0",
-    "eslint": "^4.8.0",
+    "@types/chai": "^4.2.14",
+    "@types/eslint": "^7.2.4",
+    "@types/eslint-config-prettier": "^6.11.0",
+    "@types/eslint-plugin-prettier": "^3.1.0",
+    "@types/json-stringify-safe": "^5.0.0",
+    "@types/mocha": "^8.0.3",
+    "@types/node": "^12.12.6",
+    "@types/sinon": "^9.0.8",
+    "@typescript-eslint/eslint-plugin": "^4.5.0",
+    "@typescript-eslint/parser": "^4.5.0",
+    "ajv": "^6.12.6",
+    "chai": "^4.2.0",
+    "coveralls": "^3.1.0",
+    "eslint": "^7.11.0",
     "eslint-config": "^0.3.0",
-    "eslint-config-standard": "^10.2.1",
-    "eslint-plugin-import": "^2.7.0",
-    "eslint-plugin-node": "^5.2.0",
-    "eslint-plugin-promise": "^3.5.0",
-    "eslint-plugin-standard": "^3.0.1",
-    "json-schema-ref-parser": "^3.3.1",
+    "eslint-config-prettier": "^6.14.0",
+    "eslint-config-standard": "^15.0.0",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^3.1.4",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.2",
+    "json-schema-ref-parser": "^9.0.6",
     "json-stringify-safe": "^5.0.1",
     "mocha": "^4.0.1",
     "nyc": "^11.2.1",
-    "sinon": "^4.0.1"
-  },
-  "dependencies": {
-    "compute-lcm": "^1.1.0",
-    "json-schema-compare": "^0.2.2",
-    "lodash": "^4.17.4"
+    "prettier": "^2.1.2",
+    "sinon": "^4.0.1",
+    "typescript": "^4.0.3"
   }
 }
