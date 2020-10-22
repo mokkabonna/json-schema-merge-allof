@@ -1,10 +1,10 @@
+import type { DeepReadonly } from 'ts-essentials';
 import compare from 'json-schema-compare';
 import computeLcm from 'compute-lcm';
 import {
-  cloneDeep,
   defaultsDeep,
-  flatten,
-  flattenDeep,
+  flattenDeep as lodashFlattenDeep,
+  identity,
   intersection,
   intersectionWith,
   isEqual,
@@ -12,9 +12,9 @@ import {
   pullAll,
   sortBy,
   forEach,
-  uniq,
-  uniqWith,
-  without
+  uniq as lodashUniq,
+  uniqWith as lodashUniqWith,
+  without as lodashWithout
 } from 'lodash';
 import type { Resolvers } from './types';
 import type { JSONSchema4, JSONSchema6, JSONSchema7 } from 'json-schema';
@@ -22,6 +22,54 @@ import type { MergeSchemas } from './types';
 
 type JSONSchema = JSONSchema4 | JSONSchema6 | JSONSchema7;
 type JSONSchema46 = JSONSchema4 | JSONSchema6;
+
+// like _.flatten but maintain object identity if nothing changes
+function flatten(arr: any[]): any[] {
+  let changed = false;
+  const copy = [];
+  for (const val of arr) {
+    if (Array.isArray(val)) {
+      changed = true;
+      copy.push(...val);
+    } else {
+      copy.push(val);
+    }
+  }
+  return changed ? copy : arr;
+}
+
+// like _.flattenDeep but maintain object identity if nothing changes
+const flattenDeep: typeof lodashFlattenDeep = function flattenDeepCoW(
+  arr: any[]
+): any[] {
+  for (const val of arr) {
+    if (Array.isArray(val)) {
+      return lodashFlattenDeep(arr);
+    }
+  }
+  return arr;
+};
+
+// like _.uniq but maintain object identity if nothing changes
+// const uniq: typeof lodashUniq = function uniqCoW(arr) {
+//   const res = lodashUniq(arr);
+//   return res.length === arr.length ? arr : res;
+// } as typeof lodashUniq;
+const uniq = lodashUniq;
+
+// like _.uniqWith but maintain object identity if nothing changes
+// const uniqWith: typeof lodashUniqWith = function uniqWithCoW(arr) {
+//   const res = lodashUniqWith(arr);
+//   return res.length === arr.length ? arr : res;
+// } as typeof lodashUniqWith;
+const uniqWith = lodashUniqWith;
+
+// like _.without but maintain object identity if nothing changes
+// const without: typeof lodashWithout = function withoutCoW(arr) {
+//   const res = lodashWithout(arr);
+//   return res.length === arr.length ? arr : res;
+// } as typeof lodashWithout;
+const without = lodashWithout;
 
 const withoutArr = (arr, ...rest) =>
   without.apply(null, [arr].concat(flatten(rest)));
@@ -47,6 +95,14 @@ const maximumValue = (compacted) => Math.max.apply(Math, compacted);
 const minimumValue = (compacted) => Math.min.apply(Math, compacted);
 const uniqueItems = (compacted) => compacted.some(isTrue);
 const examples = (compacted) => uniqWith(flatten(compacted), isEqual);
+
+const freeze =
+  process.env.NODE_ENV === 'test'
+    ? (ob) => {
+        const deepFreeze = require('deep-freeze');
+        return deepFreeze(ob);
+      }
+    : identity;
 
 function compareProp(key) {
   return function (a, b) {
@@ -122,8 +178,8 @@ function keys<T>(obj: T): Array<keyof T> {
 }
 
 function getAnyOfCombinations<T extends JSONSchema>(
-  arrOfArrays: T[][],
-  combinations?: T[][]
+  arrOfArrays: DeepReadonly<T[][]>,
+  combinations?: DeepReadonly<T[][]>
 ) {
   combinations = combinations || [];
   if (!arrOfArrays.length) {
@@ -221,7 +277,7 @@ function callGroupResolver(
         .map(function (schema) {
           return keys.reduce(function (all, key) {
             if (schema[key] !== undefined) {
-              all[key] = schema[key];
+              all = setProp(all, key, schema[key]);
             }
             return all;
           }, {});
@@ -236,11 +292,15 @@ function callGroupResolver(
     // TODO: Remove "any"
     const mergers: any = (related as any).reduce(function (all, key) {
       if (contains(schemaGroupProps, key)) {
-        all[key] = createRequiredSubMerger(mergeSchemas, key, parents);
+        all = setProp(
+          all,
+          key,
+          createRequiredSubMerger(mergeSchemas, key, parents)
+        );
       } else {
-        all[key] = function (schemas) {
+        all = setProp(all, key, function (schemas) {
           return mergeSchemas(schemas, null, parents.concat(key));
-        };
+        });
       }
       return all;
     }, {});
@@ -279,8 +339,7 @@ function mergeSchemaGroup(group, mergeSchemas, source?: JSONSchema[]) {
     function (all, key) {
       const schemas = extractor(group, key);
       const compacted = uniqWith(schemas.filter(notUndefined), compare);
-      // @ts-ignore
-      all[key] = mergeSchemas(compacted, key);
+      all = setProp(all, key, mergeSchemas(compacted, key));
       return all;
     },
     source ? [] : {}
@@ -288,19 +347,19 @@ function mergeSchemaGroup(group, mergeSchemas, source?: JSONSchema[]) {
 }
 
 function removeFalseSchemas(target) {
-  forEach(target, function (schema, prop) {
+  let changed = false;
+  const copy = { ...target };
+  forEach(copy, function (schema, prop) {
     if (schema === false) {
-      delete target[prop];
+      changed = true;
+      delete copy[prop];
     }
   });
+  return changed ? copy : target;
 }
 
 function removeFalseSchemasFromArray(target) {
-  forEach(target, function (schema, index) {
-    if (schema === false) {
-      target.splice(index, 1);
-    }
-  });
+  return target.filter((s) => s !== false);
 }
 
 function createRequiredMetaArray(arr) {
@@ -347,13 +406,17 @@ const defaultResolvers: Resolvers<JSONSchema> = {
   properties(values, key, mergers, options) {
     // first get rid of all non permitted properties
     if (!options.ignoreAdditionalProperties) {
+      values = [...values];
       values.forEach(function (subSchema) {
-        const otherSubSchemas = values.filter((s) => s !== subSchema);
         const ownKeys = keys(subSchema.properties);
         const ownPatternKeys = keys(subSchema.patternProperties);
-        // @ts-ignore
-        const ownPatterns = ownPatternKeys.map((k) => new RegExp(k));
-        otherSubSchemas.forEach(function (other) {
+        const ownPatterns = ownPatternKeys.map((k) => new RegExp(k as string));
+
+        values.forEach(function (other, idx) {
+          if (other === subSchema) {
+            return;
+          }
+
           const allOtherKeys = keys(other.properties);
           const keysMatchingPattern = allOtherKeys.filter((k) =>
             // @ts-ignore
@@ -364,36 +427,53 @@ const defaultResolvers: Resolvers<JSONSchema> = {
             ownKeys,
             keysMatchingPattern
           );
+
+          let otherProps = other.properties;
           additionalKeys.forEach(function (key) {
-            other.properties[key] = mergers.properties(
-              // @ts-ignore
-              [other.properties[key], subSchema.additionalProperties],
-              key
+            otherProps = setProp(
+              otherProps,
+              key,
+              mergers.properties(
+                // @ts-ignore
+                [otherProps[key], subSchema.additionalProperties],
+                key
+              )
             );
           });
+          values[idx] = setProp(other, 'properties', otherProps);
         });
       });
 
       // remove disallowed patternProperties
       values.forEach(function (subSchema) {
-        const otherSubSchemas = values.filter((s) => s !== subSchema);
         const ownPatternKeys = keys(subSchema.patternProperties);
         if (subSchema.additionalProperties === false) {
-          otherSubSchemas.forEach(function (other) {
+          values.forEach(function (other, idx) {
+            if (other === subSchema) {
+              return;
+            }
+
             const allOtherPatterns = keys(other.patternProperties);
             const additionalPatternKeys = withoutArr(
               allOtherPatterns,
               ownPatternKeys
             );
-            additionalPatternKeys.forEach(
-              (key) => delete other.patternProperties[key]
+            let otherPatternProps = other.patternProperties;
+            additionalPatternKeys.forEach((key) => {
+              const { [key]: dummy, ...rest } = otherPatternProps;
+              otherPatternProps = rest;
+            });
+            values[idx] = setProp(
+              other,
+              'patternProperties',
+              otherPatternProps
             );
           });
         }
       });
     }
 
-    const returnObject = {
+    let returnObject = {
       additionalProperties: mergers.additionalProperties(
         // @ts-ignore
         values.map((s) => s.additionalProperties)
@@ -409,7 +489,11 @@ const defaultResolvers: Resolvers<JSONSchema> = {
     };
 
     if (returnObject.additionalProperties === false) {
-      removeFalseSchemas(returnObject.properties);
+      returnObject = setProp(
+        returnObject,
+        'properties',
+        removeFalseSchemas(returnObject.properties)
+      );
     }
 
     return returnObject;
@@ -449,8 +533,8 @@ const defaultResolvers: Resolvers<JSONSchema> = {
   items(values, paths, mergers) {
     const items = values.map((s) => (s as JSONSchema).items);
     const itemsCompacted = items.filter(notUndefined);
-    const returnObject: JSONSchema = {};
 
+    let returnObject: JSONSchema = {};
     if (itemsCompacted.every(isSchema)) {
       returnObject.items = (mergers as any).items(items);
     } else {
@@ -478,7 +562,11 @@ const defaultResolvers: Resolvers<JSONSchema> = {
       returnObject.additionalItems === false &&
       Array.isArray(returnObject.items)
     ) {
-      removeFalseSchemasFromArray(returnObject.items);
+      returnObject = setProp(
+        returnObject,
+        'items',
+        removeFalseSchemasFromArray(returnObject.items)
+      );
     }
 
     return returnObject;
@@ -486,7 +574,7 @@ const defaultResolvers: Resolvers<JSONSchema> = {
   // @ts-ignore
   oneOf(compacted, paths, mergeSchemas) {
     // @ts-ignore
-    const combinations = getAnyOfCombinations(cloneDeep(compacted));
+    const combinations = getAnyOfCombinations(compacted);
     const result = tryMergeSchemaGroups(combinations, mergeSchemas);
     const unique = uniqWith(result, compare);
 
@@ -623,7 +711,11 @@ function merger(
 ): JSONSchema46;
 function merger(rootSchema: JSONSchema, options?: Options): JSONSchema;
 
-function merger<T extends JSONSchema>(rootSchema, options, totalSchemas) {
+function merger<T extends JSONSchema>(
+  rootSchema: DeepReadonly<T>,
+  options,
+  totalSchemas
+) {
   totalSchemas = totalSchemas || [];
   options = defaultsDeep(options, {
     ignoreAdditionalProperties: false,
@@ -632,13 +724,15 @@ function merger<T extends JSONSchema>(rootSchema, options, totalSchemas) {
   });
 
   function mergeSchemas<T extends JSONSchema>(
-    schemas: T[],
-    base?: T | null | undefined,
-    parents?: Array<keyof T>
+    schemas: DeepReadonly<T>[],
+    base?: DeepReadonly<T> | null | undefined,
+    parents?: Array<keyof T | keyof DeepReadonly<T>>
   ) {
-    schemas = cloneDeep(schemas.filter(notUndefined));
+    schemas = schemas.filter(notUndefined);
     parents = parents || [];
-    const merged: T = isPlainObject(base) ? (base as T) : ({} as T);
+    let merged: DeepReadonly<T> = isPlainObject(base)
+      ? (base as DeepReadonly<T>)
+      : ({} as DeepReadonly<T>);
 
     // return undefined, an empty schema
     if (!schemas.length) {
@@ -656,12 +750,10 @@ function merger<T extends JSONSchema>(rootSchema, options, totalSchemas) {
     // there are no false and we don't need the true ones as they accept everything
     schemas = schemas.filter(isPlainObject);
 
-    const allKeys: Array<keyof T> = allUniqueKeys(schemas);
+    const allKeys: Array<keyof DeepReadonly<T>> = allUniqueKeys(schemas);
     if (options.deep && contains(allKeys, 'allOf')) {
       return merger(
-        {
-          allOf: schemas
-        },
+        { allOf: schemas },
         options,
         // @ts-ignore TS2552
         totalSchemas
@@ -681,16 +773,20 @@ function merger<T extends JSONSchema>(rootSchema, options, totalSchemas) {
       // arrayprops like anyOf and oneOf must be merged first, as they contains schemas
       // allOf is treated differently alltogether
       if (compacted.length === 1 && contains(schemaArrays, key)) {
-        merged[key] = compacted[0].map(function (schema) {
-          return mergeSchemas([schema], schema);
-        });
+        merged = setProp(
+          merged,
+          key,
+          compacted[0].map(function (schema) {
+            return mergeSchemas([schema], schema);
+          })
+        );
         // prop groups must always be resolved
       } else if (
         compacted.length === 1 &&
         !contains(schemaGroupProps, key) &&
         !contains(schemaProps, key)
       ) {
-        merged[key] = compacted[0];
+        merged = setProp(merged, key, compacted[0]);
       } else {
         const resolver =
           options.resolvers[key] || options.resolvers.defaultResolver;
@@ -714,26 +810,27 @@ function merger<T extends JSONSchema>(rootSchema, options, totalSchemas) {
         }
 
         let calledWithArray = false;
-        merged[key] = resolver(
-          compacted,
-          parents.concat(key),
-          merger,
-          options,
-          function (unresolvedSchemas) {
+        merged = setProp(
+          merged,
+          key,
+          resolver(compacted, parents.concat(key), merger, options, function (
+            unresolvedSchemas
+          ) {
             calledWithArray = Array.isArray(unresolvedSchemas);
             return addToAllOf(unresolvedSchemas);
-          }
+          })
         );
 
         if (merged[key] === undefined && !calledWithArray) {
           throwIncompatible(compacted, parents.concat(key));
         } else if (merged[key] === undefined) {
-          delete merged[key];
+          const { [key]: dummy, ...rest } = merged;
+          merged = rest as DeepReadonly<T>;
         }
       }
     });
 
-    Object.assign(
+    merged = setProps(
       merged,
       callGroupResolver(
         propertyKeys,
@@ -744,7 +841,7 @@ function merger<T extends JSONSchema>(rootSchema, options, totalSchemas) {
         parents
       )
     );
-    Object.assign(
+    merged = setProps(
       merged,
       callGroupResolver(
         itemKeys,
@@ -757,7 +854,10 @@ function merger<T extends JSONSchema>(rootSchema, options, totalSchemas) {
     );
 
     function addToAllOf(unresolvedSchemas) {
-      merged.allOf = mergeWithArray(merged.allOf, unresolvedSchemas);
+      merged = {
+        ...merged,
+        allOf: mergeWithArray(merged.allOf, unresolvedSchemas)
+      };
     }
 
     return merged;
@@ -773,4 +873,35 @@ merger.options = {
   resolvers: defaultResolvers
 };
 
-module.exports = merger;
+function setProp<T>(ob, key, value): T {
+  if (Array.isArray(ob)) {
+    ob = [...ob];
+    ob[key] = value;
+    return ob;
+  } else {
+    return ob[key] === value ? ob : { ...ob, [key]: value };
+  }
+}
+
+function setProps<T>(ob, values): T {
+  for (const k in values) {
+    ob = setProp(ob, k, values[k]);
+  }
+  return ob;
+}
+
+module.exports =
+  process.env.NODE_ENV === 'test'
+    ? (...args) => {
+        // In test mode, *make sure* we do not accidentally mutate anything
+        const deepFreeze = require('deep-freeze');
+        const [rootSchema, ...rest] = args;
+        console.error(
+          require('util').inspect(
+            { rootSchema, rest },
+            { depth: 5, colors: true }
+          )
+        );
+        return merger(deepFreeze(rootSchema), ...rest);
+      }
+    : merger;
