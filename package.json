@@ -17,6 +17,10 @@
   },
   "license": "MIT",
   "author": "Martin Hansen",
+  "contributors": [
+    "Martin Hansen",
+    "Petter Häggholm <petter@owl.co>"
+  ],
   "main": "src/index.js",
   "directories": {
     "lib": "src",

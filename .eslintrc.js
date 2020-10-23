@@ -16,6 +16,16 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'warn',
     'prefer-spread': 'warn',
     '@typescript-eslint/no-var-requires': 'warn',
-    'no-prototype-builtins': 'warn'
+    'no-prototype-builtins': 'warn',
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        vars: 'all',
+        args: 'after-used',
+        varsIgnorePattern: '^dummy',
+        argsIgnorePattern: '^dummy',
+        ignoreRestSiblings: true
+      }
+    ]
   }
 };

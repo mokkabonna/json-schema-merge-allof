@@ -1,108 +1,56 @@
+import type { JSONSchema4, JSONSchema6, JSONSchema7 } from 'json-schema';
 import type { DeepReadonly } from 'ts-essentials';
 import compare from 'json-schema-compare';
 import computeLcm from 'compute-lcm';
 import {
   defaultsDeep,
-  flattenDeep as lodashFlattenDeep,
-  identity,
+  forEach,
   intersection,
   intersectionWith,
   isEqual,
   isPlainObject,
   pullAll,
-  sortBy,
-  forEach,
-  uniq as lodashUniq,
-  uniqWith as lodashUniqWith,
-  without as lodashWithout
+  sortBy
 } from 'lodash';
-import type { Resolvers } from './types';
-import type { JSONSchema4, JSONSchema6, JSONSchema7 } from 'json-schema';
-import type { MergeSchemas } from './types';
+
+import type { MergeSchemas, Resolvers } from './types';
+import {
+  allUniqueKeys,
+  contains,
+  examples,
+  first,
+  flatten,
+  flattenDeep,
+  isEmptySchema,
+  isFalse,
+  isItemsRelated,
+  isPropertyRelated,
+  isSchema,
+  isTrue,
+  keys,
+  maximumValue,
+  minimumValue,
+  notUndefined,
+  required,
+  schemaResolver,
+  stringArray,
+  uniq,
+  uniqueItems,
+  uniqWith,
+  withoutArr
+} from './util';
+import {
+  propertyRelated,
+  itemsRelated,
+  schemaArrays,
+  schemaGroupProps,
+  schemaProps
+} from './constants';
 
 type JSONSchema = JSONSchema4 | JSONSchema6 | JSONSchema7;
 type JSONSchema46 = JSONSchema4 | JSONSchema6;
 
-// like _.flatten but maintain object identity if nothing changes
-function flatten(arr: any[]): any[] {
-  let changed = false;
-  const copy = [];
-  for (const val of arr) {
-    if (Array.isArray(val)) {
-      changed = true;
-      copy.push(...val);
-    } else {
-      copy.push(val);
-    }
-  }
-  return changed ? copy : arr;
-}
-
-// like _.flattenDeep but maintain object identity if nothing changes
-const flattenDeep: typeof lodashFlattenDeep = function flattenDeepCoW(
-  arr: any[]
-): any[] {
-  for (const val of arr) {
-    if (Array.isArray(val)) {
-      return lodashFlattenDeep(arr);
-    }
-  }
-  return arr;
-};
-
-// like _.uniq but maintain object identity if nothing changes
-// const uniq: typeof lodashUniq = function uniqCoW(arr) {
-//   const res = lodashUniq(arr);
-//   return res.length === arr.length ? arr : res;
-// } as typeof lodashUniq;
-const uniq = lodashUniq;
-
-// like _.uniqWith but maintain object identity if nothing changes
-// const uniqWith: typeof lodashUniqWith = function uniqWithCoW(arr) {
-//   const res = lodashUniqWith(arr);
-//   return res.length === arr.length ? arr : res;
-// } as typeof lodashUniqWith;
-const uniqWith = lodashUniqWith;
-
-// like _.without but maintain object identity if nothing changes
-// const without: typeof lodashWithout = function withoutCoW(arr) {
-//   const res = lodashWithout(arr);
-//   return res.length === arr.length ? arr : res;
-// } as typeof lodashWithout;
-const without = lodashWithout;
-
-const withoutArr = (arr, ...rest) =>
-  without.apply(null, [arr].concat(flatten(rest)));
-const isPropertyRelated = (key) => contains(propertyRelated, key);
-const isItemsRelated = (key) => contains(itemsRelated, key);
-const contains = (arr, val) => arr.indexOf(val) !== -1;
-const isEmptySchema = (obj) =>
-  !keys(obj).length && obj !== false && obj !== true;
-const isSchema = (val) => isPlainObject(val) || val === true || val === false;
-const isFalse = (val) => val === false;
-const isTrue = (val) => val === true;
-const schemaResolver = (compacted, key, mergeSchemas) =>
-  mergeSchemas(compacted);
-const stringArray = (values) => sortBy(uniq(flattenDeep(values)));
-const notUndefined = (val) => val !== undefined;
-const allUniqueKeys = <T>(arr: T[]): Array<keyof T> =>
-  uniq(flattenDeep(arr.map(keys)));
-
-// resolvers
-const first = (compacted) => compacted[0];
-const required = (compacted) => stringArray(compacted);
-const maximumValue = (compacted) => Math.max.apply(Math, compacted);
-const minimumValue = (compacted) => Math.min.apply(Math, compacted);
-const uniqueItems = (compacted) => compacted.some(isTrue);
-const examples = (compacted) => uniqWith(flatten(compacted), isEqual);
-
-const freeze =
-  process.env.NODE_ENV === 'test'
-    ? (ob) => {
-        const deepFreeze = require('deep-freeze');
-        return deepFreeze(ob);
-      }
-    : identity;
+const hasOwnProperty = Object.prototype.hasOwnProperty;
 
 function compareProp(key) {
   return function (a, b) {
@@ -136,7 +84,7 @@ function getItemSchemas(subSchemas, key) {
       const schemaAtPos = sub.items[key];
       if (isSchema(schemaAtPos)) {
         return schemaAtPos;
-      } else if (sub.hasOwnProperty('additionalItems')) {
+      } else if (hasOwnProperty.call(sub, 'additionalItems')) {
         return sub.additionalItems;
       }
     } else {
@@ -167,14 +115,6 @@ function getAdditionalSchemas(subSchemas) {
     }
     return sub.items;
   });
-}
-
-function keys<T>(obj: T): Array<keyof T> {
-  if (isPlainObject(obj) || Array.isArray(obj)) {
-    return Object.keys(obj) as Array<keyof T>;
-  } else {
-    return [];
-  }
 }
 
 function getAnyOfCombinations<T extends JSONSchema>(
@@ -237,7 +177,7 @@ function cleanupReturnValue(returnObject) {
   // cleanup empty
   for (const prop in returnObject) {
     if (
-      returnObject.hasOwnProperty(prop) &&
+      hasOwnProperty.call(returnObject, prop) &&
       isEmptySchema(returnObject[prop])
     ) {
       delete returnObject[prop];
@@ -365,28 +305,6 @@ function removeFalseSchemasFromArray(target) {
 function createRequiredMetaArray(arr) {
   return { required: arr };
 }
-
-const propertyRelated = [
-  'properties',
-  'patternProperties',
-  'additionalProperties'
-] as const;
-const itemsRelated = ['items', 'additionalItems'] as const;
-const schemaGroupProps = [
-  'properties',
-  'patternProperties',
-  'definitions',
-  'dependencies'
-] as const;
-const schemaArrays = ['anyOf', 'oneOf'] as const;
-const schemaProps = [
-  'additionalProperties',
-  'additionalItems',
-  'contains',
-  'propertyNames',
-  'not',
-  'items'
-] as const;
 
 const defaultResolvers: Resolvers<JSONSchema> = {
   type(compacted) {
@@ -896,12 +814,6 @@ module.exports =
         // In test mode, *make sure* we do not accidentally mutate anything
         const deepFreeze = require('deep-freeze');
         const [rootSchema, ...rest] = args;
-        console.error(
-          require('util').inspect(
-            { rootSchema, rest },
-            { depth: 5, colors: true }
-          )
-        );
         return merger(deepFreeze(rootSchema), ...rest);
       }
     : merger;
