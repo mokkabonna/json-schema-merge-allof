@@ -22,6 +22,7 @@
     "Petter Häggholm <petter@owl.co>"
   ],
   "main": "src/index.js",
+  "types": "src/types.d.ts",
   "directories": {
     "lib": "src",
     "test": "test"

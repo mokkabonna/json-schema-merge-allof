@@ -808,12 +808,11 @@ function setProps<T>(ob, values): T {
   return ob;
 }
 
-module.exports =
-  process.env.NODE_ENV === 'test'
-    ? (...args) => {
-        // In test mode, *make sure* we do not accidentally mutate anything
-        const deepFreeze = require('deep-freeze');
-        const [rootSchema, ...rest] = args;
-        return merger(deepFreeze(rootSchema), ...rest);
-      }
-    : merger;
+export = (process.env.NODE_ENV === 'test'
+  ? (...args) => {
+      // In test mode, *make sure* we do not accidentally mutate anything
+      const deepFreeze = require('deep-freeze');
+      const [rootSchema, ...rest] = args;
+      return merger(deepFreeze(rootSchema), ...rest);
+    }
+  : merger) as typeof merger;
