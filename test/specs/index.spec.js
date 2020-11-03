@@ -80,43 +80,6 @@ describe('module', function() {
     })
   })
 
-  it('does not use any original objects or arrays', () => {
-    const schema = {
-      properties: {
-        arr: {
-          type: 'array',
-          items: {
-            type: 'object'
-          },
-          additionalItems: [{
-            type: 'array'
-          }]
-        }
-      },
-      allOf: [{
-        properties: {
-          test: true
-        }
-      }]
-    }
-
-    function innerDeconstruct(schema) {
-      const allChildObj = Object.entries(schema).map(([key, val]) => {
-        if (_.isObject(val)) return innerDeconstruct(val)
-      })
-      return [schema, ..._.flatten(allChildObj)]
-    }
-
-    const getAllObjects = schema => _(innerDeconstruct(schema)).compact().value()
-    const inputObjects = getAllObjects(schema)
-
-    const result = merger(schema)
-    const resultObjects = getAllObjects(result)
-
-    const commonObjects = _.intersection(inputObjects, resultObjects)
-    expect(commonObjects).to.have.length(0)
-  })
-
   it('combines simple usecase', function() {
     var result = merger({
       allOf: [{

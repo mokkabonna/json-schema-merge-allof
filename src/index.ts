@@ -180,7 +180,8 @@ function cleanupReturnValue(returnObject) {
       hasOwnProperty.call(returnObject, prop) &&
       isEmptySchema(returnObject[prop])
     ) {
-      delete returnObject[prop];
+      const { [prop]: dummy, ...rest } = returnObject;
+      returnObject = rest;
     }
   }
   return returnObject;
@@ -212,7 +213,7 @@ function callGroupResolver(
       throw new Error('No resolver found for ' + resolverName);
     }
 
-    const compacted = uniqWith(
+    let compacted = uniqWith(
       schemas
         .map(function (schema) {
           return keys.reduce(function (all, key) {
@@ -225,6 +226,7 @@ function callGroupResolver(
         .filter(notUndefined),
       compare
     );
+    if (isEqual(compacted, schemas)) compacted = schemas;
 
     const related =
       resolverName === 'properties' ? propertyRelated : itemsRelated;
@@ -256,7 +258,7 @@ function callGroupResolver(
       };
     }
 
-    const result = resolver(
+    let result = resolver(
       compacted,
       parents.concat(resolverName),
       mergers,
@@ -267,7 +269,18 @@ function callGroupResolver(
       throwIncompatible(compacted, parents.concat(resolverName));
     }
 
-    return cleanupReturnValue(result);
+    result = cleanupReturnValue(result);
+    if (Object.keys(result).length === 1) {
+      if (
+        'properties' in result &&
+        isEqual(result.properties, schemas[0].properties)
+      ) {
+        return { properties: schemas[0].properties };
+      } else if ('items' in result && isEqual(result.items, schemas[0].items)) {
+        return { items: schemas[0].items };
+      }
+    }
+    return result;
   }
 }
 
@@ -279,8 +292,7 @@ function mergeSchemaGroup(group, mergeSchemas, source?: JSONSchema[]) {
     function (all, key) {
       const schemas = extractor(group, key);
       const compacted = uniqWith(schemas.filter(notUndefined), compare);
-      all = setProp(all, key, mergeSchemas(compacted, key));
-      return all;
+      return setProp(all, key, mergeSchemas(compacted, key));
     },
     source ? [] : {}
   );
@@ -772,10 +784,13 @@ function merger<T extends JSONSchema>(
     );
 
     function addToAllOf(unresolvedSchemas) {
-      merged = {
-        ...merged,
-        allOf: mergeWithArray(merged.allOf, unresolvedSchemas)
-      };
+      const mergedAllOf = mergeWithArray(merged.allOf, unresolvedSchemas);
+      if (mergedAllOf !== merged.allOf) {
+        merged = {
+          ...merged,
+          allOf: mergeWithArray(merged.allOf, unresolvedSchemas)
+        };
+      }
     }
 
     return merged;
@@ -792,18 +807,21 @@ merger.options = {
 };
 
 function setProp<T>(ob, key, value): T {
-  if (Array.isArray(ob)) {
-    ob = [...ob];
-    ob[key] = value;
-    return ob;
-  } else {
-    return ob[key] === value ? ob : { ...ob, [key]: value };
+  if (ob[key] !== value) {
+    if (Array.isArray(ob)) {
+      ob = ob.slice();
+      ob[key] = value;
+    } else {
+      ob = { ...ob, [key]: value };
+    }
   }
+  return ob;
 }
 
 function setProps<T>(ob, values): T {
   for (const k in values) {
-    ob = setProp(ob, k, values[k]);
+    const val = values[k];
+    if (val !== ob[k]) ob = setProp(ob, k, val);
   }
   return ob;
 }
