@@ -1,3 +1,10 @@
 node_modules
 .nyc_output
 coverage
+src/*.js
+src/*.map
+src/*.d.ts
+!src/types.d.ts
+*.tsbuildinfo
+yarn.lock
+yarn-error.log
