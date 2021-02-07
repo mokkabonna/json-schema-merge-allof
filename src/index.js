@@ -18,6 +18,7 @@ var without = require('lodash/without')
 var withoutArr = (arr, ...rest) => without.apply(null, [arr].concat(flatten(rest)))
 var isPropertyRelated = (key) => contains(propertyRelated, key)
 var isItemsRelated = (key) => contains(itemsRelated, key)
+var isConditionalRelated = (key) => contains(conditonalRelated, key)
 var contains = (arr, val) => arr.indexOf(val) !== -1
 var isEmptySchema = (obj) => (!keys(obj).length) && obj !== false && obj !== true
 var isSchema = (val) => isPlainObject(val) || val === true || val === false
@@ -174,9 +175,14 @@ function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options, p
       }, {})
     }).filter(notUndefined), compare)
 
-    var related = resolverName === 'properties'
-      ? propertyRelated
-      : itemsRelated
+    const map = {
+      properties: propertyRelated,
+      items: itemsRelated,
+      if: conditonalRelated
+    }
+
+    const isIf = resolverName === 'if'
+    const related = map[resolverName]
 
     var mergers = related.reduce(function(all, key) {
       if (contains(schemaGroupProps, key)) {
@@ -202,7 +208,11 @@ function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options, p
       throwIncompatible(compacted, parents.concat(resolverName))
     }
 
-    return cleanupReturnValue(result)
+    if (isIf) {
+      return result
+    } else {
+      return cleanupReturnValue(result)
+    }
   }
 }
 
@@ -244,6 +254,7 @@ function createRequiredMetaArray(arr) {
 
 var propertyRelated = ['properties', 'patternProperties', 'additionalProperties']
 var itemsRelated = ['items', 'additionalItems']
+var conditonalRelated = ['if', 'then', 'else']
 var schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
 var schemaArrays = ['anyOf', 'oneOf']
 var schemaProps = [
@@ -402,6 +413,27 @@ var defaultResolvers = {
     if (enums.length) {
       return sortBy(enums)
     }
+  },
+  if(values, props, mergers, options) {
+    const allWithConditional = values.filter(schema =>
+      conditonalRelated.some(keyword => schema.hasOwnProperty(keyword)))
+
+    // merge sub schemas completely
+    // if,then,else must not be merged to the base schema, but if they contain allOf themselves, that should be merged
+    function merge(schema) {
+      const obj = {}
+      if (schema.hasOwnProperty('if')) obj.if = mergers.if([schema.if])
+      if (schema.hasOwnProperty('then')) obj.then = mergers.then([schema.then])
+      if (schema.hasOwnProperty('else')) obj.else = mergers.else([schema.else])
+      return obj
+    }
+
+    // first schema with any of the 3 keywords is used as base
+    const first = merge(allWithConditional.shift())
+    return allWithConditional.reduce((all, schema) => {
+      all.allOf = (all.allOf || []).concat(merge(schema))
+      return all
+    }, first)
   }
 }
 
@@ -475,6 +507,9 @@ function merger(rootSchema, options, totalSchemas) {
     var itemKeys = allKeys.filter(isItemsRelated)
     pullAll(allKeys, itemKeys)
 
+    var conditonalKeys = allKeys.filter(isConditionalRelated)
+    pullAll(allKeys, conditonalKeys)
+
     allKeys.forEach(function(key) {
       var values = getValues(schemas, key)
       var compacted = uniqWith(values.filter(notUndefined), compareProp(key))
@@ -506,10 +541,12 @@ function merger(rootSchema, options, totalSchemas) {
         }
 
         var calledWithArray = false
-        merged[key] = resolver(compacted, parents.concat(key), merger, options, function(unresolvedSchemas) {
+        const reportUnresolved = unresolvedSchemas => {
           calledWithArray = Array.isArray(unresolvedSchemas)
           return addToAllOf(unresolvedSchemas)
-        })
+        }
+
+        merged[key] = resolver(compacted, parents.concat(key), merger, options, reportUnresolved)
 
         if (merged[key] === undefined && !calledWithArray) {
           throwIncompatible(compacted, parents.concat(key))
@@ -521,6 +558,7 @@ function merger(rootSchema, options, totalSchemas) {
 
     Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, mergeSchemas, options, parents))
     Object.assign(merged, callGroupResolver(itemKeys, 'items', schemas, mergeSchemas, options, parents))
+    Object.assign(merged, callGroupResolver(conditonalKeys, 'if', schemas, mergeSchemas, options, parents))
 
     function addToAllOf(unresolvedSchemas) {
       merged.allOf = mergeWithArray(merged.allOf, unresolvedSchemas)
