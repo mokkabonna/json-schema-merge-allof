@@ -1,6 +1,6 @@
 var chai = require('chai')
 var mergerModule = require('../../src')
-var Ajv = require('ajv')
+var Ajv = require('ajv').default
 var _ = require('lodash')
 var $RefParser = require('json-schema-ref-parser')
 

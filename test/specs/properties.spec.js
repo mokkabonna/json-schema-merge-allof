@@ -3,9 +3,11 @@ var merger = require('../../src')
 var sinon = require('sinon')
 var _ = require('lodash')
 var expect = chai.expect
-var Ajv = require('ajv')
+var Ajv = require('ajv').default
 
-var ajv = new Ajv()
+var ajv = new Ajv({
+  allowMatchingProperties: true
+})
 describe('properties', function() {
   describe('when property name has same as a reserved word', function() {
     it('does not treat it as a reserved word', function() {
@@ -182,6 +184,7 @@ describe('properties', function() {
     it('disallows all except matching patternProperties if both false', function() {
       var schema = {
         allOf: [{
+          type: 'object',
           properties: {
             foo: true,
             foo123: true
@@ -191,6 +194,7 @@ describe('properties', function() {
           },
           additionalProperties: false
         }, {
+          type: 'object',
           properties: {
             bar: true,
             bar123: true
@@ -206,6 +210,7 @@ describe('properties', function() {
       expect(result).not.to.eql(origSchema)
 
       expect(result).to.eql({
+        type: 'object',
         properties: {
           bar: true,
           foo123: true,
@@ -240,6 +245,7 @@ describe('properties', function() {
     it('disallows all except matching patternProperties if both true', function() {
       var schema = {
         allOf: [{
+          type: 'object',
           properties: {
             foo: true,
             foo123: true
@@ -248,6 +254,7 @@ describe('properties', function() {
             '^bar': true
           }
         }, {
+          type: 'object',
           properties: {
             bar: true,
             bar123: true
@@ -262,6 +269,7 @@ describe('properties', function() {
       expect(result).not.to.eql(origSchema)
 
       expect(result).to.eql({
+        type: 'object',
         properties: {
           foo: true,
           bar: true,
@@ -301,11 +309,13 @@ describe('properties', function() {
     it('disallows all except matching patternProperties if one false', function() {
       var schema = {
         allOf: [{
+          type: 'object',
           properties: {
             foo: true,
             foo123: true
           }
         }, {
+          type: 'object',
           properties: {
             bar: true,
             bar123: true
@@ -321,6 +331,7 @@ describe('properties', function() {
       expect(result).not.to.eql(origSchema)
 
       expect(result).to.eql({
+        type: 'object',
         properties: {
           bar: true,
           foo123: true,
@@ -636,6 +647,7 @@ describe('properties', function() {
     it('merges with properties if matching property name', function() {
       var schema = {
         allOf: [{
+          type: 'object',
           properties: {
             'name': {
               type: 'string',
@@ -649,6 +661,7 @@ describe('properties', function() {
             }
           }
         }, {
+          type: 'object',
           properties: {
             'foo_long': {
               type: 'string',
@@ -670,6 +683,7 @@ describe('properties', function() {
       expect(result).not.to.eql(origSchema)
 
       expect(result).to.eql({
+        type: 'object',
         properties: {
           'foo_long': {
             type: 'string',
