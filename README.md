@@ -122,7 +122,7 @@ Those two resolvers are expected to return an object containing the resolved val
 Also the resolve function is not passed **mergeSchemas**, but an object **mergers** that contains mergers for each of the related keywords. So properties get passed an object like this:
 
 ```js
-var mergers = {
+const mergers = {
     properties: function mergeSchemas(schemas, childSchemaName){...},
     patternProperties: function mergeSchemas(schemas, childSchemaName){...},
     additionalProperties: function mergeSchemas(schemas){...},

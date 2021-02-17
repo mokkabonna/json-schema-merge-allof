@@ -1,12 +1,8 @@
-var chai = require('chai')
-var merger = require('../../src')
-var sinon = require('sinon')
-var _ = require('lodash')
-var expect = chai.expect
-var Ajv = require('ajv').default
+const chai = require('chai')
+const merger = require('../../src')
+const expect = chai.expect
 
-var ajv = new Ajv()
-describe.only('if then else', function() {
+describe('if then else', function() {
   it('moves the if then else to the base schema if none there', () => {
     const result = merger({
       allOf: [{
@@ -264,7 +260,7 @@ describe.only('if then else', function() {
     }, {
       resolvers: {
         foo(values, paths, mergeSchemas, options, reportUnresolved) {
-          var key = paths.pop()
+          const key = paths.pop()
           reportUnresolved(values.map((val) => {
             return {
               [key]: val

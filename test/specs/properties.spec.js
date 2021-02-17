@@ -1,17 +1,17 @@
-var chai = require('chai')
-var merger = require('../../src')
-var sinon = require('sinon')
-var _ = require('lodash')
-var expect = chai.expect
-var Ajv = require('ajv').default
+const chai = require('chai')
+const merger = require('../../src')
+const sinon = require('sinon')
+const _ = require('lodash')
+const expect = chai.expect
+const Ajv = require('ajv').default
 
-var ajv = new Ajv({
+const ajv = new Ajv({
   allowMatchingProperties: true
 })
 describe('properties', function() {
   describe('when property name has same as a reserved word', function() {
     it('does not treat it as a reserved word', function() {
-      var stub = sinon.stub().returns({
+      const stub = sinon.stub().returns({
         properties: {
           properties: {
             type: 'string',
@@ -48,7 +48,7 @@ describe('properties', function() {
 
   describe('additionalProperties', function() {
     it('allows no extra properties if additionalProperties is false', function() {
-      var result = merger({
+      const result = merger({
         allOf: [{
           additionalProperties: true
         }, {
@@ -62,7 +62,7 @@ describe('properties', function() {
     })
 
     it('allows only intersecting properties', function() {
-      var result = merger({
+      const result = merger({
         allOf: [{
           properties: {
             foo: true
@@ -85,7 +85,7 @@ describe('properties', function() {
     })
 
     it('allows intersecting patternproperties', function() {
-      var result = merger({
+      const result = merger({
         allOf: [{
           properties: {
             foo: true,
@@ -116,7 +116,7 @@ describe('properties', function() {
     })
 
     it('disallows all except matching patternProperties if both false', function() {
-      var result = merger({
+      const result = merger({
         allOf: [{
           properties: {
             foo: true,
@@ -143,7 +143,7 @@ describe('properties', function() {
     })
 
     it('disallows all except matching patternProperties if both false', function() {
-      var result = merger({
+      const result = merger({
         allOf: [{
           properties: {
             foo: true,
@@ -182,7 +182,7 @@ describe('properties', function() {
     })
 
     it('disallows all except matching patternProperties if both false', function() {
-      var schema = {
+      const schema = {
         allOf: [{
           type: 'object',
           properties: {
@@ -205,8 +205,8 @@ describe('properties', function() {
           additionalProperties: false
         }]
       }
-      var origSchema = _.cloneDeep(schema)
-      var result = merger(schema)
+      const origSchema = _.cloneDeep(schema)
+      const result = merger(schema)
       expect(result).not.to.eql(origSchema)
 
       expect(result).to.eql({
@@ -243,7 +243,7 @@ describe('properties', function() {
     })
 
     it('disallows all except matching patternProperties if both true', function() {
-      var schema = {
+      const schema = {
         allOf: [{
           type: 'object',
           properties: {
@@ -264,8 +264,8 @@ describe('properties', function() {
           }
         }]
       }
-      var origSchema = _.cloneDeep(schema)
-      var result = merger(schema)
+      const origSchema = _.cloneDeep(schema)
+      const result = merger(schema)
       expect(result).not.to.eql(origSchema)
 
       expect(result).to.eql({
@@ -307,7 +307,7 @@ describe('properties', function() {
     })
 
     it('disallows all except matching patternProperties if one false', function() {
-      var schema = {
+      const schema = {
         allOf: [{
           type: 'object',
           properties: {
@@ -326,8 +326,8 @@ describe('properties', function() {
           additionalProperties: false
         }]
       }
-      var origSchema = _.cloneDeep(schema)
-      var result = merger(schema)
+      const origSchema = _.cloneDeep(schema)
+      const result = merger(schema)
       expect(result).not.to.eql(origSchema)
 
       expect(result).to.eql({
@@ -368,7 +368,7 @@ describe('properties', function() {
     })
 
     it('disallows all if no patternProperties and if both false', function() {
-      var result = merger({
+      const result = merger({
         allOf: [{
           properties: {
             foo: true,
@@ -389,7 +389,7 @@ describe('properties', function() {
     })
 
     it('applies additionalProperties to other schemas properties if they have any', function() {
-      var result = merger({
+      const result = merger({
         properties: {
           common: true,
           root: true
@@ -449,7 +449,7 @@ describe('properties', function() {
     })
 
     it('considers patternProperties before merging additionalProperties to other schemas properties if they have any', function() {
-      var result = merger({
+      const result = merger({
         properties: {
           common: true,
           root: true
@@ -538,7 +538,7 @@ describe('properties', function() {
     })
 
     it('combines additionalProperties when schemas', function() {
-      var result = merger({
+      const result = merger({
         additionalProperties: true,
         allOf: [{
           additionalProperties: {
@@ -570,7 +570,7 @@ describe('properties', function() {
 
   describe('patternProperties', function() {
     it('merges simliar schemas', function() {
-      var result = merger({
+      const result = merger({
         patternProperties: {
           '^\\$.+': {
             type: [
@@ -616,7 +616,7 @@ describe('properties', function() {
 
   describe('when patternProperties present', function() {
     it('merges patternproperties', function() {
-      var result = merger({
+      const result = merger({
         allOf: [{
           patternProperties: {
             '.*': {
@@ -645,17 +645,17 @@ describe('properties', function() {
     })
 
     it('merges with properties if matching property name', function() {
-      var schema = {
+      const schema = {
         allOf: [{
           type: 'object',
           properties: {
-            'name': {
+            name: {
               type: 'string',
               minLength: 1
             }
           },
           patternProperties: {
-            '_long$': {
+            _long$: {
               type: 'string',
               minLength: 7
             }
@@ -663,7 +663,7 @@ describe('properties', function() {
         }, {
           type: 'object',
           properties: {
-            'foo_long': {
+            foo_long: {
               type: 'string',
               minLength: 9
             }
@@ -677,25 +677,25 @@ describe('properties', function() {
         }]
       }
 
-      var origSchema = _.cloneDeep(schema)
-      var result = merger(schema)
+      const origSchema = _.cloneDeep(schema)
+      const result = merger(schema)
 
       expect(result).not.to.eql(origSchema)
 
       expect(result).to.eql({
         type: 'object',
         properties: {
-          'foo_long': {
+          foo_long: {
             type: 'string',
             minLength: 9
           },
-          'name': {
+          name: {
             type: 'string',
             minLength: 1
           }
         },
         patternProperties: {
-          '_long$': {
+          _long$: {
             type: 'string',
             minLength: 7
           },
@@ -727,7 +727,7 @@ describe('properties', function() {
 })
 
 function validateInputOutput(schema, transformedSchema, obj) {
-  var validOriginal = ajv.validate(schema, obj)
-  var validNew = ajv.validate(transformedSchema, obj)
+  const validOriginal = ajv.validate(schema, obj)
+  const validNew = ajv.validate(transformedSchema, obj)
   expect(validOriginal).to.eql(validNew)
 }

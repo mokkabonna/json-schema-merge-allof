@@ -1,11 +1,11 @@
-var chai = require('chai')
-var merger = require('../../src')
-var _ = require('lodash')
-var $RefParser = require('json-schema-ref-parser')
-var metaSchema = require('../fixtures/schemas/meta-schema-v6.json')
+const chai = require('chai')
+const merger = require('../../src')
+const _ = require('lodash')
+const $RefParser = require('json-schema-ref-parser')
+const metaSchema = require('../fixtures/schemas/meta-schema-v6.json')
 
-var expect = chai.expect
-var schema
+const expect = chai.expect
+let schema
 describe.skip('simplify the meta schema', function() {
   beforeEach(function() {
     return $RefParser.dereference(_.cloneDeep(metaSchema)).then(function(dereferenced) {
@@ -14,7 +14,7 @@ describe.skip('simplify the meta schema', function() {
   })
 
   it('simplifies', function() {
-    var result = merger(_.cloneDeep(schema))
+    const result = merger(_.cloneDeep(schema))
     expect(result).to.eql(schema)
   })
 })
