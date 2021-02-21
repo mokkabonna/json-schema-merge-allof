@@ -8,20 +8,17 @@ const intersection = require('lodash/intersection')
 const intersectionWith = require('lodash/intersectionWith')
 const isEqual = require('lodash/isEqual')
 const isPlainObject = require('lodash/isPlainObject')
+const isFunction = require('lodash/isFunction')
 const pullAll = require('lodash/pullAll')
 const sortBy = require('lodash/sortBy')
-const forEach = require('lodash/forEach')
 const uniq = require('lodash/uniq')
 const uniqWith = require('lodash/uniqWith')
-const without = require('lodash/without')
 
-const has = (obj, propName) => Object.prototype.hasOwnProperty.call(obj, propName)
-const withoutArr = (arr, ...rest) => without.apply(null, [arr].concat(flatten(rest)))
-const isPropertyRelated = (key) => contains(propertyRelated, key)
-const isItemsRelated = (key) => contains(itemsRelated, key)
-const isConditionalRelated = (key) => contains(conditonalRelated, key)
+const ifResolver = require('./complex-resolvers/if')
+const propertiesResolver = require('./complex-resolvers/properties')
+const itemsResolver = require('./complex-resolvers/items')
+
 const contains = (arr, val) => arr.indexOf(val) !== -1
-const isEmptySchema = (obj) => (!keys(obj).length) && obj !== false && obj !== true
 const isSchema = (val) => isPlainObject(val) || val === true || val === false
 const isFalse = (val) => val === false
 const isTrue = (val) => val === true
@@ -56,27 +53,6 @@ function getValues(schemas, key) {
   return schemas.map(schema => schema && schema[key])
 }
 
-function getItemSchemas(subSchemas, key) {
-  return subSchemas.map(function(sub) {
-    if (!sub) {
-      return undefined
-    }
-
-    if (Array.isArray(sub.items)) {
-      const schemaAtPos = sub.items[key]
-      if (isSchema(schemaAtPos)) {
-        return schemaAtPos
-      } else if (has(sub, 'additionalItems')) {
-        return sub.additionalItems
-      }
-    } else {
-      return sub.items
-    }
-
-    return undefined
-  })
-}
-
 function tryMergeSchemaGroups(schemaGroups, mergeSchemas) {
   return schemaGroups.map(function(schemas, index) {
     try {
@@ -85,18 +61,6 @@ function tryMergeSchemaGroups(schemaGroups, mergeSchemas) {
       return undefined
     }
   }).filter(notUndefined)
-}
-
-function getAdditionalSchemas(subSchemas) {
-  return subSchemas.map(function(sub) {
-    if (!sub) {
-      return undefined
-    }
-    if (Array.isArray(sub.items)) {
-      return sub.additionalItems
-    }
-    return sub.items
-  })
 }
 
 function keys(obj) {
@@ -121,15 +85,6 @@ function getAnyOfCombinations(arrOfArrays, combinations) {
   return getAnyOfCombinations(rest, values.map(item => (item)))
 }
 
-function mergeWithArray(base, newItems) {
-  if (Array.isArray(base)) {
-    base.splice.apply(base, [0, 0].concat(newItems))
-    return base
-  } else {
-    return newItems
-  }
-}
-
 function throwIncompatible(values, paths) {
   let asJSON
   try {
@@ -142,16 +97,6 @@ function throwIncompatible(values, paths) {
   throw new Error('Could not resolve values for path:"' + paths.join('.') + '". They are probably incompatible. Values: \n' + asJSON)
 }
 
-function cleanupReturnValue(returnObject) {
-  // cleanup empty
-  for (const prop in returnObject) {
-    if (has(returnObject, prop) && isEmptySchema(returnObject[prop])) {
-      delete returnObject[prop]
-    }
-  }
-  return returnObject
-}
-
 function createRequiredSubMerger(mergeSchemas, key, parents) {
   return function(schemas, subKey) {
     if (subKey === undefined) {
@@ -162,102 +107,45 @@ function createRequiredSubMerger(mergeSchemas, key, parents) {
   }
 }
 
-function callGroupResolver(keys, resolverName, schemas, mergeSchemas, options, parents) {
-  if (keys.length) {
-    const resolver = options.resolvers[resolverName]
-    if (!resolver) {
+function callGroupResolver(complexKeywords, resolverName, schemas, mergeSchemas, options, parents) {
+  if (complexKeywords.length) {
+    const resolverConfig = options.complexResolvers[resolverName]
+    if (!resolverConfig || !resolverConfig.resolver) {
       throw new Error('No resolver found for ' + resolverName)
     }
 
-    const compacted = uniqWith(schemas.map(function(schema) {
-      return keys.reduce(function(all, key) {
-        if (schema[key] !== undefined) {
-          all[key] = schema[key]
-        }
-        return all
-      }, {})
-    }).filter(notUndefined), compare)
-
-    const map = {
-      properties: propertyRelated,
-      items: itemsRelated,
-      if: conditonalRelated
-    }
-
-    const isIf = resolverName === 'if'
-    const related = map[resolverName]
-
-    const mergers = related.reduce(function(all, key) {
-      if (contains(schemaGroupProps, key)) {
-        all[key] = createRequiredSubMerger(mergeSchemas, key, parents)
-      } else {
-        all[key] = function(schemas) {
-          return mergeSchemas(schemas, null, parents.concat(key))
-        }
-      }
+    // extract all keywords from all the schemas that have one or more
+    // then remove all undefined ones and not unique
+    const extractedKeywordsOnly = schemas.map(schema => complexKeywords.reduce((all, key) => {
+      if (schema[key] !== undefined) all[key] = schema[key]
       return all
-    }, {})
+    }, {}))
+    const unique = uniqWith(extractedKeywordsOnly, compare)
 
-    if (resolverName === 'items') {
-      mergers.itemsArray = createRequiredSubMerger(mergeSchemas, 'items', parents)
-      mergers.items = function(schemas) {
-        return mergeSchemas(schemas, null, parents.concat('items'))
-      }
-    }
+    // create mergers that automatically add the path of the keyword for use in the complex resolver
+    const mergers = resolverConfig.keywords.reduce((all, key) => ({
+      ...all,
+      [key]: (schemas, extraKey = []) => mergeSchemas(schemas, null, parents.concat(key, extraKey))
+    }), {})
 
-    const result = resolver(compacted, parents.concat(resolverName), mergers, options)
+    // const merger = (schemas, key) => mergeSchemas(schemas, null, key ? parents.concat(key) : parents)
+    const result = resolverConfig.resolver(unique, parents.concat(resolverName), mergers, options)
 
     if (!isPlainObject(result)) {
-      throwIncompatible(compacted, parents.concat(resolverName))
+      throwIncompatible(unique, parents.concat(resolverName))
     }
 
-    if (isIf) {
-      return result
-    } else {
-      return cleanupReturnValue(result)
-    }
+    return result
   }
-}
-
-// Provide source when array
-function mergeSchemaGroup(group, mergeSchemas, source) {
-  const allKeys = allUniqueKeys(source || group)
-  const extractor = source
-    ? getItemSchemas
-    : getValues
-  return allKeys.reduce(function(all, key) {
-    const schemas = extractor(group, key)
-    const compacted = uniqWith(schemas.filter(notUndefined), compare)
-    all[key] = mergeSchemas(compacted, key)
-    return all
-  }, source
-    ? []
-    : {})
-}
-
-function removeFalseSchemas(target) {
-  forEach(target, function(schema, prop) {
-    if (schema === false) {
-      delete target[prop]
-    }
-  })
-}
-
-function removeFalseSchemasFromArray(target) {
-  forEach(target, function(schema, index) {
-    if (schema === false) {
-      target.splice(index, 1)
-    }
-  })
 }
 
 function createRequiredMetaArray(arr) {
   return { required: arr }
 }
 
-const propertyRelated = ['properties', 'patternProperties', 'additionalProperties']
-const itemsRelated = ['items', 'additionalItems']
-const conditonalRelated = ['if', 'then', 'else']
+// const propertyRelated = ['properties', 'patternProperties', 'additionalProperties']
+// const itemsRelated = ['items', 'additionalItems']
+// const conditonalRelated = ['if', 'then', 'else']
 const schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
 const schemaArrays = ['anyOf', 'oneOf']
 const schemaProps = [
@@ -286,52 +174,6 @@ const defaultResolvers = {
       }
     }
   },
-  properties(values, key, mergers, options) {
-    // first get rid of all non permitted properties
-    if (!options.ignoreAdditionalProperties) {
-      values.forEach(function(subSchema) {
-        const otherSubSchemas = values.filter(s => s !== subSchema)
-        const ownKeys = keys(subSchema.properties)
-        const ownPatternKeys = keys(subSchema.patternProperties)
-        const ownPatterns = ownPatternKeys.map(k => new RegExp(k))
-        otherSubSchemas.forEach(function(other) {
-          const allOtherKeys = keys(other.properties)
-          const keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
-          const additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
-          additionalKeys.forEach(function(key) {
-            other.properties[key] = mergers.properties([
-              other.properties[key], subSchema.additionalProperties
-            ], key)
-          })
-        })
-      })
-
-      // remove disallowed patternProperties
-      values.forEach(function(subSchema) {
-        const otherSubSchemas = values.filter(s => s !== subSchema)
-        const ownPatternKeys = keys(subSchema.patternProperties)
-        if (subSchema.additionalProperties === false) {
-          otherSubSchemas.forEach(function(other) {
-            const allOtherPatterns = keys(other.patternProperties)
-            const additionalPatternKeys = withoutArr(allOtherPatterns, ownPatternKeys)
-            additionalPatternKeys.forEach(key => delete other.patternProperties[key])
-          })
-        }
-      })
-    }
-
-    const returnObject = {
-      additionalProperties: mergers.additionalProperties(values.map(s => s.additionalProperties)),
-      patternProperties: mergeSchemaGroup(values.map(s => s.patternProperties), mergers.patternProperties),
-      properties: mergeSchemaGroup(values.map(s => s.properties), mergers.properties)
-    }
-
-    if (returnObject.additionalProperties === false) {
-      removeFalseSchemas(returnObject.properties)
-    }
-
-    return returnObject
-  },
   dependencies(compacted, paths, mergeSchemas) {
     const allChildren = allUniqueKeys(compacted)
 
@@ -358,34 +200,6 @@ const defaultResolvers = {
       all[childKey] = mergeSchemas(innerCompacted, childKey)
       return all
     }, {})
-  },
-  items(values, paths, mergers) {
-    const items = values.map(s => s.items)
-    const itemsCompacted = items.filter(notUndefined)
-    const returnObject = {}
-
-    if (itemsCompacted.every(isSchema)) {
-      returnObject.items = mergers.items(items)
-    } else {
-      returnObject.items = mergeSchemaGroup(values, mergers.itemsArray, items)
-    }
-
-    let schemasAtLastPos
-    if (itemsCompacted.every(Array.isArray)) {
-      schemasAtLastPos = values.map(s => s.additionalItems)
-    } else if (itemsCompacted.some(Array.isArray)) {
-      schemasAtLastPos = getAdditionalSchemas(values)
-    }
-
-    if (schemasAtLastPos) {
-      returnObject.additionalItems = mergers.additionalItems(schemasAtLastPos)
-    }
-
-    if (returnObject.additionalItems === false && Array.isArray(returnObject.items)) {
-      removeFalseSchemasFromArray(returnObject.items)
-    }
-
-    return returnObject
   },
   oneOf(compacted, paths, mergeSchemas) {
     const combinations = getAnyOfCombinations(cloneDeep(compacted))
@@ -416,27 +230,6 @@ const defaultResolvers = {
     if (enums.length) {
       return sortBy(enums)
     }
-  },
-  if(values, props, mergers, options) {
-    const allWithConditional = values.filter(schema =>
-      conditonalRelated.some(keyword => has(schema, keyword)))
-
-    // merge sub schemas completely
-    // if,then,else must not be merged to the base schema, but if they contain allOf themselves, that should be merged
-    function merge(schema) {
-      const obj = {}
-      if (has(schema, 'if')) obj.if = mergers.if([schema.if])
-      if (has(schema, 'then')) obj.then = mergers.then([schema.then])
-      if (has(schema, 'else')) obj.else = mergers.else([schema.else])
-      return obj
-    }
-
-    // first schema with any of the 3 keywords is used as base
-    const first = merge(allWithConditional.shift())
-    return allWithConditional.reduce((all, schema) => {
-      all.allOf = (all.allOf || []).concat(merge(schema))
-      return all
-    }, first)
   }
 }
 
@@ -453,6 +246,8 @@ defaultResolvers.description = first
 defaultResolvers.examples = examples
 defaultResolvers.exclusiveMaximum = minimumValue
 defaultResolvers.exclusiveMinimum = maximumValue
+defaultResolvers.if = ifResolver
+defaultResolvers.items = itemsResolver
 defaultResolvers.maximum = minimumValue
 defaultResolvers.maxItems = minimumValue
 defaultResolvers.maxLength = minimumValue
@@ -461,6 +256,7 @@ defaultResolvers.minimum = maximumValue
 defaultResolvers.minItems = maximumValue
 defaultResolvers.minLength = maximumValue
 defaultResolvers.minProperties = maximumValue
+defaultResolvers.properties = propertiesResolver
 defaultResolvers.propertyNames = schemaResolver
 defaultResolvers.required = required
 defaultResolvers.title = first
@@ -470,9 +266,14 @@ function merger(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
   options = defaultsDeep(options, {
     ignoreAdditionalProperties: false,
-    resolvers: defaultResolvers,
+    resolvers: cloneDeep(defaultResolvers),
     deep: true
   })
+
+  const allResolverEntries = Object.entries(options.resolvers)
+  options.resolvers = Object.fromEntries(allResolverEntries.filter(([key, val]) => isFunction(val)))
+  const complexResolvers = allResolverEntries.filter(([key, val]) => isPlainObject(val))
+  options.complexResolvers = Object.fromEntries(complexResolvers)
 
   function mergeSchemas(schemas, base, parents) {
     schemas = cloneDeep(schemas.filter(notUndefined))
@@ -504,14 +305,11 @@ function merger(rootSchema, options, totalSchemas) {
       }, options, totalSchemas)
     }
 
-    const propertyKeys = allKeys.filter(isPropertyRelated)
-    pullAll(allKeys, propertyKeys)
+    const complexKeysArr = complexResolvers.map(([resolverKeyword, resolverConf]) =>
+      allKeys.filter(k => [resolverKeyword, ...resolverConf.keywords].includes(k)))
 
-    const itemKeys = allKeys.filter(isItemsRelated)
-    pullAll(allKeys, itemKeys)
-
-    const conditonalKeys = allKeys.filter(isConditionalRelated)
-    pullAll(allKeys, conditonalKeys)
+    // remove all complex keys before simple resolvers
+    complexKeysArr.forEach(keys => pullAll(allKeys, keys))
 
     allKeys.forEach(function(key) {
       const values = getValues(schemas, key)
@@ -543,15 +341,9 @@ function merger(rootSchema, options, totalSchemas) {
           }
         }
 
-        let calledWithArray = false
-        const reportUnresolved = unresolvedSchemas => {
-          calledWithArray = Array.isArray(unresolvedSchemas)
-          return addToAllOf(unresolvedSchemas)
-        }
+        merged[key] = resolver(compacted, parents.concat(key), merger, options)
 
-        merged[key] = resolver(compacted, parents.concat(key), merger, options, reportUnresolved)
-
-        if (merged[key] === undefined && !calledWithArray) {
+        if (merged[key] === undefined) {
           throwIncompatible(compacted, parents.concat(key))
         } else if (merged[key] === undefined) {
           delete merged[key]
@@ -559,15 +351,12 @@ function merger(rootSchema, options, totalSchemas) {
       }
     })
 
-    Object.assign(merged, callGroupResolver(propertyKeys, 'properties', schemas, mergeSchemas, options, parents))
-    Object.assign(merged, callGroupResolver(itemKeys, 'items', schemas, mergeSchemas, options, parents))
-    Object.assign(merged, callGroupResolver(conditonalKeys, 'if', schemas, mergeSchemas, options, parents))
-
-    function addToAllOf(unresolvedSchemas) {
-      merged.allOf = mergeWithArray(merged.allOf, unresolvedSchemas)
-    }
-
-    return merged
+    return complexResolvers.reduce((all, [resolverKeyword, config], index) => {
+      return {
+        ...all,
+        ...callGroupResolver(complexKeysArr[index], resolverKeyword, schemas, mergeSchemas, options, parents)
+      }
+    }, merged)
   }
 
   const allSchemas = flattenDeep(getAllOf(rootSchema))
