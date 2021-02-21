@@ -107,9 +107,22 @@ The function is passed:
 
 
 ### Combined resolvers
-No separate resolver is called for patternProperties and additionalProperties, only the properties resolver is called. Same for additionalItems, only items resolver is called. This is because those keywords need to be resolved together as they affect each other.
+Some keyword are dependant on other keywords, like properties, patternProperties, additionalProperties. To create a resolver for these the resolver requires this structure:
 
-Those two resolvers are expected to return an object containing the resolved values of all the associated keywords. The keys must be the name of the keywords. So the properties resolver need to return an object like this containing the resolved values for each keyword:
+```js
+mergeAllOf(schema, {
+  resolvers: {
+    properties:
+      keywords: ['properties', 'patternProperties', 'additionalProperties'],
+      resolver(values, parents, mergers, options) {
+
+      }
+    }
+  }
+})
+```
+
+This type of resolvers are expected to return an object containing the resolved values of all the associated keywords. The keys must be the name of the keywords. So the properties resolver need to return an object like this containing the resolved values for each keyword:
 
 ```js
 {
