@@ -1,10 +1,10 @@
-var chai = require('chai')
-var merger = require('../../src')
-var expect = chai.expect
+const chai = require('chai')
+const merger = require('../../src')
+const expect = chai.expect
 
 describe('items', function() {
   it('merges additionalItems', function() {
-    var result = merger({
+    const result = merger({
       items: {
         type: 'object'
       },
@@ -49,7 +49,7 @@ describe('items', function() {
 
   describe('when single schema', function() {
     it('merges them', function() {
-      var result = merger({
+      const result = merger({
         items: {
           type: 'string',
           allOf: [{
@@ -80,7 +80,7 @@ describe('items', function() {
 
   describe('when array', function() {
     it('merges them in when additionalItems are all undefined', function() {
-      var result = merger({
+      const result = merger({
         items: [{
           type: 'string',
           allOf: [{
@@ -110,7 +110,7 @@ describe('items', function() {
     })
 
     it('merges in additionalItems from one if present', function() {
-      var result = merger({
+      const result = merger({
         allOf: [{
           items: [{
             type: 'string',
@@ -142,7 +142,7 @@ describe('items', function() {
     })
 
     it('merges in additionalItems from one if present', function() {
-      var result = merger({
+      const result = merger({
         allOf: [{
           items: [{
             type: 'string',
@@ -175,7 +175,7 @@ describe('items', function() {
     })
 
     it('merges in additionalItems schema', function() {
-      var result = merger({
+      const result = merger({
         allOf: [{
           items: [{
             type: 'string',
@@ -222,7 +222,7 @@ describe('items', function() {
 
   describe('when mixed array and object', function() {
     it('merges in additionalItems schema', function() {
-      var result = merger({
+      const result = merger({
         // This should be ignored according to spec when items absent
         additionalItems: {
           type: 'integer',

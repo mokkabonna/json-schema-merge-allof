@@ -78,6 +78,12 @@ When multiple conflicting **not** values are found, we also use the approach tha
 
 Allows you to combine schema properties even though some schemas have `additionalProperties: false` This is the most common issue people face when trying to expand schemas using allOf and a limitation of the json schema spec. Be aware though that the schema produced will allow more than the original schema. But this is useful if just want to combine schemas using allOf as if additionalProperties wasn't false during the merge process. The resulting schema will still get additionalProperties set to false.
 
+**deep** boolean, default *true*
+If false, resolves only the top-level `allOf` keyword in the schema.
+
+If true, resolves all `allOf` keywords in the schema.
+
+
 **resolvers** Object
 Override any default resolver like this:
 
@@ -91,11 +97,6 @@ mergeAllOf(schema, {
   }
 })
 ```
-
-**deep** boolean, default *true*
-If false, resolves only the top-level `allOf` keyword in the schema.
-
-If true, resolves all `allOf` keywords in the schema.
 
 The function is passed:
 
@@ -121,7 +122,7 @@ Those two resolvers are expected to return an object containing the resolved val
 Also the resolve function is not passed **mergeSchemas**, but an object **mergers** that contains mergers for each of the related keywords. So properties get passed an object like this:
 
 ```js
-var mergers = {
+const mergers = {
     properties: function mergeSchemas(schemas, childSchemaName){...},
     patternProperties: function mergeSchemas(schemas, childSchemaName){...},
     additionalProperties: function mergeSchemas(schemas){...},
