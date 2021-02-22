@@ -1,11 +1,11 @@
-var chai = require('chai')
-var merger = require('../../src')
+const chai = require('chai')
+const merger = require('../../src')
 
-var expect = chai.expect
+const expect = chai.expect
 
 describe('options', function() {
   it('allows otherwise incompatible properties if option ignoreAdditionalProperties is true', function() {
-    var result = merger({
+    const result = merger({
       allOf: [{
         properties: {
           foo: true
@@ -29,7 +29,7 @@ describe('options', function() {
       additionalProperties: false
     })
 
-    var result2 = merger({
+    const result2 = merger({
       allOf: [{
         additionalProperties: true
       }, {
@@ -41,7 +41,7 @@ describe('options', function() {
   })
 
   it('ignoreAdditionalProperties is true, also allows merging of patternProperties', function() {
-    var result = merger({
+    const result = merger({
       allOf: [{
         properties: {
           foo: true
@@ -75,7 +75,7 @@ describe('options', function() {
       additionalProperties: false
     })
 
-    var result2 = merger({
+    const result2 = merger({
       allOf: [{
         additionalProperties: true
       }, {
@@ -98,7 +98,7 @@ describe('options', function() {
   })
 
   it('uses supplied resolver for unknown keyword', function() {
-    var result = merger({
+    const result = merger({
       foo: 3,
       allOf: [{
         foo: 7
@@ -117,7 +117,7 @@ describe('options', function() {
   })
 
   it('uses default merger if no resolver found', function() {
-    var result = merger({
+    const result = merger({
       foo: 3,
       allOf: [{
         foo: 7
@@ -136,14 +136,14 @@ describe('options', function() {
   })
 
   it('merges deep by default', function() {
-    var result = merger({
+    const result = merger({
       allOf: [{
         properties: {
-          foo: {type: 'string'},
+          foo: { type: 'string' },
           bar: {
             allOf: [{
               properties: {
-                baz: {type: 'string'}
+                baz: { type: 'string' }
               }
             }]
           }
@@ -153,10 +153,10 @@ describe('options', function() {
 
     expect(result).to.eql({
       properties: {
-        foo: {type: 'string'},
+        foo: { type: 'string' },
         bar: {
           properties: {
-            baz: {type: 'string'}
+            baz: { type: 'string' }
           }
         }
       }
@@ -164,28 +164,28 @@ describe('options', function() {
   })
 
   it('doesn\'t merge deep when deep is false', function() {
-    var result = merger({
+    const result = merger({
       allOf: [{
         properties: {
-          foo: {type: 'string'},
+          foo: { type: 'string' },
           bar: {
             allOf: [{
               properties: {
-                baz: {type: 'string'}
+                baz: { type: 'string' }
               }
             }]
           }
         }
       }]
-    }, {deep: false})
+    }, { deep: false })
 
     expect(result).to.eql({
       properties: {
-        foo: {type: 'string'},
+        foo: { type: 'string' },
         bar: {
           allOf: [{
             properties: {
-              baz: {type: 'string'}
+              baz: { type: 'string' }
             }
           }]
         }

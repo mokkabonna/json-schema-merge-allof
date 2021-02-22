@@ -78,6 +78,12 @@ When multiple conflicting **not** values are found, we also use the approach tha
 
 Allows you to combine schema properties even though some schemas have `additionalProperties: false` This is the most common issue people face when trying to expand schemas using allOf and a limitation of the json schema spec. Be aware though that the schema produced will allow more than the original schema. But this is useful if just want to combine schemas using allOf as if additionalProperties wasn't false during the merge process. The resulting schema will still get additionalProperties set to false.
 
+**deep** boolean, default *true*
+If false, resolves only the top-level `allOf` keyword in the schema.
+
+If true, resolves all `allOf` keywords in the schema.
+
+
 **resolvers** Object
 Override any default resolver like this:
 
@@ -92,11 +98,6 @@ mergeAllOf(schema, {
 })
 ```
 
-**deep** boolean, default *true*
-If false, resolves only the top-level `allOf` keyword in the schema.
-
-If true, resolves all `allOf` keywords in the schema.
-
 The function is passed:
 
 - **values** an array of the conflicting values that need to be resolved
@@ -106,9 +107,22 @@ The function is passed:
 
 
 ### Combined resolvers
-No separate resolver is called for patternProperties and additionalProperties, only the properties resolver is called. Same for additionalItems, only items resolver is called. This is because those keywords need to be resolved together as they affect each other.
+Some keyword are dependant on other keywords, like properties, patternProperties, additionalProperties. To create a resolver for these the resolver requires this structure:
 
-Those two resolvers are expected to return an object containing the resolved values of all the associated keywords. The keys must be the name of the keywords. So the properties resolver need to return an object like this containing the resolved values for each keyword:
+```js
+mergeAllOf(schema, {
+  resolvers: {
+    properties:
+      keywords: ['properties', 'patternProperties', 'additionalProperties'],
+      resolver(values, parents, mergers, options) {
+
+      }
+    }
+  }
+})
+```
+
+This type of resolvers are expected to return an object containing the resolved values of all the associated keywords. The keys must be the name of the keywords. So the properties resolver need to return an object like this containing the resolved values for each keyword:
 
 ```js
 {
@@ -121,7 +135,7 @@ Those two resolvers are expected to return an object containing the resolved val
 Also the resolve function is not passed **mergeSchemas**, but an object **mergers** that contains mergers for each of the related keywords. So properties get passed an object like this:
 
 ```js
-var mergers = {
+const mergers = {
     properties: function mergeSchemas(schemas, childSchemaName){...},
     patternProperties: function mergeSchemas(schemas, childSchemaName){...},
     additionalProperties: function mergeSchemas(schemas){...},
