@@ -57,7 +57,7 @@ describe('simple resolver', () => {
       const conditonalRelated = ['if', 'then', 'else']
       const has = (obj, propName) => Object.prototype.hasOwnProperty.call(obj, propName)
       const opts = {
-        resolvers: {
+        complexResolvers: {
           if: {
             // test with same if-then-else resolver
             keywords: conditonalRelated,

@@ -8,7 +8,6 @@ const intersection = require('lodash/intersection')
 const intersectionWith = require('lodash/intersectionWith')
 const isEqual = require('lodash/isEqual')
 const isPlainObject = require('lodash/isPlainObject')
-const isFunction = require('lodash/isFunction')
 const pullAll = require('lodash/pullAll')
 const sortBy = require('lodash/sortBy')
 const uniq = require('lodash/uniq')
@@ -246,18 +245,21 @@ defaultResolvers.required = required
 defaultResolvers.title = first
 defaultResolvers.uniqueItems = uniqueItems
 
+const defaultComplexResolvers = {
+  properties: propertiesResolver,
+  items: itemsResolver
+}
+
 function merger(rootSchema, options, totalSchemas) {
   totalSchemas = totalSchemas || []
   options = defaultsDeep(options, {
     ignoreAdditionalProperties: false,
-    resolvers: cloneDeep(defaultResolvers),
+    resolvers: defaultResolvers,
+    complexResolvers: defaultComplexResolvers,
     deep: true
   })
 
-  const allResolverEntries = Object.entries(options.resolvers)
-  options.resolvers = Object.fromEntries(allResolverEntries.filter(([key, val]) => isFunction(val)))
-  const complexResolvers = allResolverEntries.filter(([key, val]) => isPlainObject(val))
-  options.complexResolvers = Object.fromEntries(complexResolvers)
+  const complexResolvers = Object.entries(options.complexResolvers)
 
   function mergeSchemas(schemas, base, parents) {
     schemas = cloneDeep(schemas.filter(notUndefined))
@@ -289,8 +291,8 @@ function merger(rootSchema, options, totalSchemas) {
       }, options, totalSchemas)
     }
 
-    const complexKeysArr = complexResolvers.map(([resolverKeyword, resolverConf]) =>
-      allKeys.filter(k => [resolverKeyword, ...resolverConf.keywords].includes(k)))
+    const complexKeysArr = complexResolvers.map(([mainKeyWord, resolverConf]) =>
+      allKeys.filter(k => resolverConf.keywords.includes(k)))
 
     // remove all complex keys before simple resolvers
     complexKeysArr.forEach(keys => pullAll(allKeys, keys))

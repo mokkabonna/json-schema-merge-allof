@@ -37,8 +37,11 @@ describe('properties', function() {
           }
         }]
       }, {
-        resolvers: {
-          properties: stub
+        complexResolvers: {
+          properties: {
+            keywords: ['properties', 'patternProperties', 'additionalProperties'],
+            resolver: stub
+          }
         }
       })
 
