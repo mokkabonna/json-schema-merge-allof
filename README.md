@@ -1,4 +1,4 @@
-# json-schema-merge-allof [![Build Status](https://travis-ci.org/mokkabonna/json-schema-merge-allof.svg?branch=master)](https://travis-ci.org/mokkabonna/json-schema-merge-allof) [![Coverage Status](https://coveralls.io/repos/github/mokkabonna/json-schema-merge-allof/badge.svg?branch=master)](https://coveralls.io/github/mokkabonna/json-schema-merge-allof?branch=master)
+# json-schema-merge-allof [![build status](https://github.com/mokkabonna/json-schema-merge-allof/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/mokkabonna/json-schema-merge-allof/actions/workflows/ci.yml) [![Coverage Status](https://coveralls.io/repos/github/mokkabonna/json-schema-merge-allof/badge.svg?branch=master)](https://coveralls.io/github/mokkabonna/json-schema-merge-allof?branch=master)
 
 > Merge schemas combined using allOf into a more readable composed schema free from allOf.
 
