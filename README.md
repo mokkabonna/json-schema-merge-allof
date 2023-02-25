@@ -173,7 +173,7 @@ For meta keywords like title, description, $id, $schema, default the strategy is
 
 ## $ref
 
-If one of your schemas contain a $ref property you should resolve them using a ref resolver like [json-schema-ref-parser](https://github.com/BigstickCarpet/json-schema-ref-parser) to dereference your schema for you first. Resolving $refs is not the task of this library.
+If one of your schemas contain a $ref property you should resolve them using a ref resolver like [json-schema-ref-parser](https://github.com/BigstickCarpet/json-schema-ref-parser) to dereference your schema for you first. Resolving $refs is not the task of this library. Currently it does not support circular references either. But if you use `bundle` in json-schema-ref-parser it should work as expected.
 
 
 ## Other libraries
