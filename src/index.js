@@ -17,21 +17,21 @@ const propertiesResolver = require('./complex-resolvers/properties')
 const itemsResolver = require('./complex-resolvers/items')
 
 const contains = (arr, val) => arr.indexOf(val) !== -1
-const isSchema = val => isPlainObject(val) || val === true || val === false
-const isFalse = val => val === false
-const isTrue = val => val === true
+const isSchema = (val) => isPlainObject(val) || val === true || val === false
+const isFalse = (val) => val === false
+const isTrue = (val) => val === true
 const schemaResolver = (compacted, key, mergeSchemas) => mergeSchemas(compacted)
-const stringArray = values => sortBy(uniq(flattenDeep(values)))
-const notUndefined = val => val !== undefined
-const allUniqueKeys = arr => uniq(flattenDeep(arr.map(keys)))
+const stringArray = (values) => sortBy(uniq(flattenDeep(values)))
+const notUndefined = (val) => val !== undefined
+const allUniqueKeys = (arr) => uniq(flattenDeep(arr.map(keys)))
 
 // resolvers
-const first = compacted => compacted[0]
-const required = compacted => stringArray(compacted)
-const maximumValue = compacted => Math.max.apply(Math, compacted)
-const minimumValue = compacted => Math.min.apply(Math, compacted)
-const uniqueItems = compacted => compacted.some(isTrue)
-const examples = compacted => uniqWith(flatten(compacted), isEqual)
+const first = (compacted) => compacted[0]
+const required = (compacted) => stringArray(compacted)
+const maximumValue = (compacted) => Math.max.apply(Math, compacted)
+const minimumValue = (compacted) => Math.min.apply(Math, compacted)
+const uniqueItems = (compacted) => compacted.some(isTrue)
+const examples = (compacted) => uniqWith(flatten(compacted), isEqual)
 
 function compareProp(key) {
   return function (a, b) {
@@ -51,7 +51,7 @@ function getAllOf(schema) {
 }
 
 function getValues(schemas, key) {
-  return schemas.map(schema => schema && schema[key])
+  return schemas.map((schema) => schema && schema[key])
 }
 
 function tryMergeSchemaGroups(schemaGroups, mergeSchemas) {
@@ -83,11 +83,11 @@ function getAnyOfCombinations(arrOfArrays, combinations) {
   const values = arrOfArrays.slice(0).shift()
   const rest = arrOfArrays.slice(1)
   if (combinations.length) {
-    return getAnyOfCombinations(rest, flatten(combinations.map(combination => values.map(item => [item].concat(combination)))))
+    return getAnyOfCombinations(rest, flatten(combinations.map((combination) => values.map((item) => [item].concat(combination)))))
   }
   return getAnyOfCombinations(
     rest,
-    values.map(item => item)
+    values.map((item) => item)
   )
 }
 
@@ -114,7 +114,7 @@ function callGroupResolver(complexKeywords, resolverName, schemas, mergeSchemas,
 
     // extract all keywords from all the schemas that have one or more
     // then remove all undefined ones and not unique
-    const extractedKeywordsOnly = schemas.map(schema =>
+    const extractedKeywordsOnly = schemas.map((schema) =>
       complexKeywords.reduce((all, key) => {
         if (schema[key] !== undefined) all[key] = schema[key]
         return all
@@ -204,13 +204,13 @@ const defaultResolvers = {
     return { anyOf: compacted }
   },
   pattern(compacted) {
-    return compacted.map(r => '(?=' + r + ')').join('')
+    return compacted.map((r) => '(?=' + r + ')').join('')
   },
   multipleOf(compacted) {
     let integers = compacted.slice(0)
     let factor = 1
-    while (integers.some(n => !Number.isInteger(n))) {
-      integers = integers.map(n => n * 10)
+    while (integers.some((n) => !Number.isInteger(n))) {
+      integers = integers.map((n) => n * 10)
       factor = factor * 10
     }
     return computeLcm(integers) / factor
@@ -299,10 +299,10 @@ function merger(rootSchema, options, totalSchemas) {
       )
     }
 
-    const complexKeysArr = complexResolvers.map(([mainKeyWord, resolverConf]) => allKeys.filter(k => resolverConf.keywords.includes(k)))
+    const complexKeysArr = complexResolvers.map(([mainKeyWord, resolverConf]) => allKeys.filter((k) => resolverConf.keywords.includes(k)))
 
     // remove all complex keys before simple resolvers
-    complexKeysArr.forEach(keys => pullAll(allKeys, keys))
+    complexKeysArr.forEach((keys) => pullAll(allKeys, keys))
 
     // call all simple resolvers for relevant keywords
     allKeys.forEach(function (key) {
@@ -312,7 +312,7 @@ function merger(rootSchema, options, totalSchemas) {
       // arrayprops like anyOf and oneOf must be merged first, as they contains schemas
       // allOf is treated differently alltogether
       if (compacted.length === 1 && contains(schemaArrays, key)) {
-        merged[key] = compacted[0].map(schema => mergeSchemas([schema], schema))
+        merged[key] = compacted[0].map((schema) => mergeSchemas([schema], schema))
         // prop groups must always be resolved
       } else if (compacted.length === 1 && !contains(schemaGroupProps, key) && !contains(schemaProps, key)) {
         merged[key] = compacted[0]

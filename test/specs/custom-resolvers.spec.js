@@ -72,7 +72,7 @@ describe('simple resolver', () => {
             // test with same if-then-else resolver
             keywords: conditonalRelated,
             resolver(schemas, paths, mergers, options) {
-              const allWithConditional = schemas.filter(schema => conditonalRelated.some(keyword => has(schema, keyword)))
+              const allWithConditional = schemas.filter((schema) => conditonalRelated.some((keyword) => has(schema, keyword)))
 
               // merge sub schemas completely
               // if,then,else must not be merged to the base schema, but if they contain allOf themselves, that should be merged

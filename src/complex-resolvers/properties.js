@@ -26,13 +26,13 @@ module.exports = {
     // first get rid of all non permitted properties
     if (!options.ignoreAdditionalProperties) {
       values.forEach(function (subSchema) {
-        const otherSubSchemas = values.filter(s => s !== subSchema)
+        const otherSubSchemas = values.filter((s) => s !== subSchema)
         const ownKeys = keys(subSchema.properties)
         const ownPatternKeys = keys(subSchema.patternProperties)
-        const ownPatterns = ownPatternKeys.map(k => new RegExp(k))
+        const ownPatterns = ownPatternKeys.map((k) => new RegExp(k))
         otherSubSchemas.forEach(function (other) {
           const allOtherKeys = keys(other.properties)
-          const keysMatchingPattern = allOtherKeys.filter(k => ownPatterns.some(pk => pk.test(k)))
+          const keysMatchingPattern = allOtherKeys.filter((k) => ownPatterns.some((pk) => pk.test(k)))
           const additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
           additionalKeys.forEach(function (key) {
             other.properties[key] = mergers.properties([other.properties[key], subSchema.additionalProperties], key)
@@ -42,26 +42,26 @@ module.exports = {
 
       // remove disallowed patternProperties
       values.forEach(function (subSchema) {
-        const otherSubSchemas = values.filter(s => s !== subSchema)
+        const otherSubSchemas = values.filter((s) => s !== subSchema)
         const ownPatternKeys = keys(subSchema.patternProperties)
         if (subSchema.additionalProperties === false) {
           otherSubSchemas.forEach(function (other) {
             const allOtherPatterns = keys(other.patternProperties)
             const additionalPatternKeys = withoutArr(allOtherPatterns, ownPatternKeys)
-            additionalPatternKeys.forEach(key => delete other.patternProperties[key])
+            additionalPatternKeys.forEach((key) => delete other.patternProperties[key])
           })
         }
       })
     }
 
     const returnObject = {
-      additionalProperties: mergers.additionalProperties(values.map(s => s.additionalProperties)),
+      additionalProperties: mergers.additionalProperties(values.map((s) => s.additionalProperties)),
       patternProperties: mergeSchemaGroup(
-        values.map(s => s.patternProperties),
+        values.map((s) => s.patternProperties),
         mergers.patternProperties
       ),
       properties: mergeSchemaGroup(
-        values.map(s => s.properties),
+        values.map((s) => s.properties),
         mergers.properties
       )
     }

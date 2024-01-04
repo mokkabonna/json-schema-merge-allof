@@ -118,7 +118,7 @@ describe('module', function () {
       return [schema, ..._.flatten(allChildObj)]
     }
 
-    const getAllObjects = schema => _(innerDeconstruct(schema)).compact().value()
+    const getAllObjects = (schema) => _(innerDeconstruct(schema)).compact().value()
     const inputObjects = getAllObjects(schema)
 
     const result = merger(schema)

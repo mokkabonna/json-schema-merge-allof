@@ -58,7 +58,7 @@ module.exports = {
   keywords: ['items', 'additionalItems'],
   resolver(values, parents, mergers) {
     // const createSubMerger = groupKey => (schemas, key) => mergeSchemas(schemas, parents.concat(groupKey, key))
-    const items = values.map(s => s.items)
+    const items = values.map((s) => s.items)
     const itemsCompacted = items.filter(notUndefined)
     const returnObject = {}
 
@@ -72,7 +72,7 @@ module.exports = {
 
     let schemasAtLastPos
     if (itemsCompacted.every(Array.isArray)) {
-      schemasAtLastPos = values.map(s => s.additionalItems)
+      schemasAtLastPos = values.map((s) => s.additionalItems)
     } else if (itemsCompacted.some(Array.isArray)) {
       schemasAtLastPos = getAdditionalSchemas(values)
     }
