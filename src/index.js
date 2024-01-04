@@ -340,7 +340,7 @@ function merger(rootSchema, options, totalSchemas) {
       );
     }
 
-    const complexKeysArr = complexResolvers.map(([mainKeyWord, resolverConf]) =>
+    const complexKeysArr = complexResolvers.map(([, resolverConf]) =>
       allKeys.filter((k) => resolverConf.keywords.includes(k))
     );
 
@@ -381,14 +381,12 @@ function merger(rootSchema, options, totalSchemas) {
 
         if (merged[key] === undefined) {
           throwIncompatible(compacted, parents.concat(key));
-        } else if (merged[key] === undefined) {
-          delete merged[key];
         }
       }
     });
 
     return complexResolvers.reduce(
-      (all, [resolverKeyword, config], index) => ({
+      (all, [resolverKeyword], index) => ({
         ...all,
         ...callGroupResolver(
           complexKeysArr[index],

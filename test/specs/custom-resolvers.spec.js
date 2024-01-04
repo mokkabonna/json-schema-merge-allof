@@ -72,7 +72,7 @@ describe('simple resolver', () => {
           if: {
             // test with same if-then-else resolver
             keywords: conditonalRelated,
-            resolver(schemas, paths, mergers, options) {
+            resolver(schemas, paths, mergers) {
               const allWithConditional = schemas.filter((schema) =>
                 conditonalRelated.some((keyword) => has(schema, keyword))
               );

@@ -111,7 +111,7 @@ describe('module', function () {
     };
 
     function innerDeconstruct(schema) {
-      const allChildObj = Object.entries(schema).map(([key, val]) => {
+      const allChildObj = Object.entries(schema).map(([, val]) => {
         if (_.isObject(val)) return innerDeconstruct(val);
         else return undefined;
       });
