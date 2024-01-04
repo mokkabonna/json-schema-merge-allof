@@ -1,6 +1,13 @@
 const compare = require('json-schema-compare')
 const forEach = require('lodash/forEach')
-const { allUniqueKeys, deleteUndefinedProps, has, isSchema, notUndefined, uniqWith } = require('../common')
+const {
+  allUniqueKeys,
+  deleteUndefinedProps,
+  has,
+  isSchema,
+  notUndefined,
+  uniqWith
+} = require('../common')
 
 function removeFalseSchemasFromArray(target) {
   forEach(target, function (schema, index) {
@@ -81,7 +88,10 @@ module.exports = {
       returnObject.additionalItems = mergers.additionalItems(schemasAtLastPos)
     }
 
-    if (returnObject.additionalItems === false && Array.isArray(returnObject.items)) {
+    if (
+      returnObject.additionalItems === false &&
+      Array.isArray(returnObject.items)
+    ) {
       removeFalseSchemasFromArray(returnObject.items)
     }
 

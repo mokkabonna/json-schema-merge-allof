@@ -1,6 +1,14 @@
 const compare = require('json-schema-compare')
 const forEach = require('lodash/forEach')
-const { allUniqueKeys, deleteUndefinedProps, getValues, keys, notUndefined, uniqWith, withoutArr } = require('../common')
+const {
+  allUniqueKeys,
+  deleteUndefinedProps,
+  getValues,
+  keys,
+  notUndefined,
+  uniqWith,
+  withoutArr
+} = require('../common')
 
 function removeFalseSchemas(target) {
   forEach(target, function (schema, prop) {
@@ -32,10 +40,19 @@ module.exports = {
         const ownPatterns = ownPatternKeys.map((k) => new RegExp(k))
         otherSubSchemas.forEach(function (other) {
           const allOtherKeys = keys(other.properties)
-          const keysMatchingPattern = allOtherKeys.filter((k) => ownPatterns.some((pk) => pk.test(k)))
-          const additionalKeys = withoutArr(allOtherKeys, ownKeys, keysMatchingPattern)
+          const keysMatchingPattern = allOtherKeys.filter((k) =>
+            ownPatterns.some((pk) => pk.test(k))
+          )
+          const additionalKeys = withoutArr(
+            allOtherKeys,
+            ownKeys,
+            keysMatchingPattern
+          )
           additionalKeys.forEach(function (key) {
-            other.properties[key] = mergers.properties([other.properties[key], subSchema.additionalProperties], key)
+            other.properties[key] = mergers.properties(
+              [other.properties[key], subSchema.additionalProperties],
+              key
+            )
           })
         })
       })
@@ -47,15 +64,22 @@ module.exports = {
         if (subSchema.additionalProperties === false) {
           otherSubSchemas.forEach(function (other) {
             const allOtherPatterns = keys(other.patternProperties)
-            const additionalPatternKeys = withoutArr(allOtherPatterns, ownPatternKeys)
-            additionalPatternKeys.forEach((key) => delete other.patternProperties[key])
+            const additionalPatternKeys = withoutArr(
+              allOtherPatterns,
+              ownPatternKeys
+            )
+            additionalPatternKeys.forEach(
+              (key) => delete other.patternProperties[key]
+            )
           })
         }
       })
     }
 
     const returnObject = {
-      additionalProperties: mergers.additionalProperties(values.map((s) => s.additionalProperties)),
+      additionalProperties: mergers.additionalProperties(
+        values.map((s) => s.additionalProperties)
+      ),
       patternProperties: mergeSchemaGroup(
         values.map((s) => s.patternProperties),
         mergers.patternProperties

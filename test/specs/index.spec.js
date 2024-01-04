@@ -118,7 +118,8 @@ describe('module', function () {
       return [schema, ..._.flatten(allChildObj)]
     }
 
-    const getAllObjects = (schema) => _(innerDeconstruct(schema)).compact().value()
+    const getAllObjects = (schema) =>
+      _(innerDeconstruct(schema)).compact().value()
     const inputObjects = getAllObjects(schema)
 
     const result = merger(schema)
@@ -1742,8 +1743,12 @@ describe('module', function () {
 
         expect(result).to.equal(dereferenced)
 
-        expect(result.properties.person.properties.child).to.equal(result.definitions.person.properties.child)
-        expect(result.properties.person.properties.child).to.equal(dereferenced.properties.person)
+        expect(result.properties.person.properties.child).to.equal(
+          result.definitions.person.properties.child
+        )
+        expect(result.properties.person.properties.child).to.equal(
+          dereferenced.properties.person
+        )
       })
     })
   })

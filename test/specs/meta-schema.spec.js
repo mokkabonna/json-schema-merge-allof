@@ -8,9 +8,11 @@ const expect = chai.expect
 let schema
 describe.skip('simplify the meta schema', function () {
   beforeEach(function () {
-    return $RefParser.dereference(_.cloneDeep(metaSchema)).then(function (dereferenced) {
-      schema = dereferenced
-    })
+    return $RefParser
+      .dereference(_.cloneDeep(metaSchema))
+      .then(function (dereferenced) {
+        schema = dereferenced
+      })
   })
 
   it('simplifies', function () {

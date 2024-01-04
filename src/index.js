@@ -83,7 +83,14 @@ function getAnyOfCombinations(arrOfArrays, combinations) {
   const values = arrOfArrays.slice(0).shift()
   const rest = arrOfArrays.slice(1)
   if (combinations.length) {
-    return getAnyOfCombinations(rest, flatten(combinations.map((combination) => values.map((item) => [item].concat(combination)))))
+    return getAnyOfCombinations(
+      rest,
+      flatten(
+        combinations.map((combination) =>
+          values.map((item) => [item].concat(combination))
+        )
+      )
+    )
   }
   return getAnyOfCombinations(
     rest,
@@ -102,10 +109,22 @@ function throwIncompatible(values, paths) {
   } catch (variable) {
     asJSON = values.join(', ')
   }
-  throw new Error('Could not resolve values for path:"' + paths.join('.') + '". They are probably incompatible. Values: \n' + asJSON)
+  throw new Error(
+    'Could not resolve values for path:"' +
+      paths.join('.') +
+      '". They are probably incompatible. Values: \n' +
+      asJSON
+  )
 }
 
-function callGroupResolver(complexKeywords, resolverName, schemas, mergeSchemas, options, parents) {
+function callGroupResolver(
+  complexKeywords,
+  resolverName,
+  schemas,
+  mergeSchemas,
+  options,
+  parents
+) {
   if (complexKeywords.length) {
     const resolverConfig = options.complexResolvers[resolverName]
     if (!resolverConfig || !resolverConfig.resolver) {
@@ -126,12 +145,18 @@ function callGroupResolver(complexKeywords, resolverName, schemas, mergeSchemas,
     const mergers = resolverConfig.keywords.reduce(
       (all, key) => ({
         ...all,
-        [key]: (schemas, extraKey = []) => mergeSchemas(schemas, null, parents.concat(key, extraKey))
+        [key]: (schemas, extraKey = []) =>
+          mergeSchemas(schemas, null, parents.concat(key, extraKey))
       }),
       {}
     )
 
-    const result = resolverConfig.resolver(unique, parents.concat(resolverName), mergers, options)
+    const result = resolverConfig.resolver(
+      unique,
+      parents.concat(resolverName),
+      mergers,
+      options
+    )
 
     if (!isPlainObject(result)) {
       throwIncompatible(unique, parents.concat(resolverName))
@@ -145,9 +170,21 @@ function createRequiredMetaArray(arr) {
   return { required: arr }
 }
 
-const schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
+const schemaGroupProps = [
+  'properties',
+  'patternProperties',
+  'definitions',
+  'dependencies'
+]
 const schemaArrays = ['anyOf', 'oneOf']
-const schemaProps = ['additionalProperties', 'additionalItems', 'contains', 'propertyNames', 'not', 'items']
+const schemaProps = [
+  'additionalProperties',
+  'additionalItems',
+  'contains',
+  'propertyNames',
+  'not',
+  'items'
+]
 
 const defaultResolvers = {
   type(compacted) {
@@ -180,7 +217,10 @@ const defaultResolvers = {
         } else {
           const innerSchemas = innerCompacted.filter(isSchema)
           const arrayMetaScheams = innerArrays.map(createRequiredMetaArray)
-          all[childKey] = mergeSchemas(innerSchemas.concat(arrayMetaScheams), childKey)
+          all[childKey] = mergeSchemas(
+            innerSchemas.concat(arrayMetaScheams),
+            childKey
+          )
         }
         return all
       }
@@ -299,7 +339,9 @@ function merger(rootSchema, options, totalSchemas) {
       )
     }
 
-    const complexKeysArr = complexResolvers.map(([mainKeyWord, resolverConf]) => allKeys.filter((k) => resolverConf.keywords.includes(k)))
+    const complexKeysArr = complexResolvers.map(([mainKeyWord, resolverConf]) =>
+      allKeys.filter((k) => resolverConf.keywords.includes(k))
+    )
 
     // remove all complex keys before simple resolvers
     complexKeysArr.forEach((keys) => pullAll(allKeys, keys))
@@ -312,12 +354,19 @@ function merger(rootSchema, options, totalSchemas) {
       // arrayprops like anyOf and oneOf must be merged first, as they contains schemas
       // allOf is treated differently alltogether
       if (compacted.length === 1 && contains(schemaArrays, key)) {
-        merged[key] = compacted[0].map((schema) => mergeSchemas([schema], schema))
+        merged[key] = compacted[0].map((schema) =>
+          mergeSchemas([schema], schema)
+        )
         // prop groups must always be resolved
-      } else if (compacted.length === 1 && !contains(schemaGroupProps, key) && !contains(schemaProps, key)) {
+      } else if (
+        compacted.length === 1 &&
+        !contains(schemaGroupProps, key) &&
+        !contains(schemaProps, key)
+      ) {
         merged[key] = compacted[0]
       } else {
-        const resolver = options.resolvers[key] || options.resolvers.defaultResolver
+        const resolver =
+          options.resolvers[key] || options.resolvers.defaultResolver
         if (!resolver)
           throw new Error(
             'No resolver found for key ' +
@@ -325,7 +374,8 @@ function merger(rootSchema, options, totalSchemas) {
               '. You can provide a resolver for this keyword in the options, or provide a default resolver.'
           )
 
-        const merger = (schemas, extraKey = []) => mergeSchemas(schemas, null, parents.concat(key, extraKey))
+        const merger = (schemas, extraKey = []) =>
+          mergeSchemas(schemas, null, parents.concat(key, extraKey))
         merged[key] = resolver(compacted, parents.concat(key), merger, options)
 
         if (merged[key] === undefined) {
@@ -339,7 +389,14 @@ function merger(rootSchema, options, totalSchemas) {
     return complexResolvers.reduce(
       (all, [resolverKeyword, config], index) => ({
         ...all,
-        ...callGroupResolver(complexKeysArr[index], resolverKeyword, schemas, mergeSchemas, options, parents)
+        ...callGroupResolver(
+          complexKeysArr[index],
+          resolverKeyword,
+          schemas,
+          mergeSchemas,
+          options,
+          parents
+        )
       }),
       merged
     )
