@@ -1,7 +1,7 @@
-const chai = require('chai')
-const merger = require('../../src')
+const chai = require('chai');
+const merger = require('../../src');
 
-const expect = chai.expect
+const expect = chai.expect;
 
 describe('options', function () {
   it('allows otherwise incompatible properties if option ignoreAdditionalProperties is true', function () {
@@ -25,7 +25,7 @@ describe('options', function () {
       {
         ignoreAdditionalProperties: true
       }
-    )
+    );
 
     expect(result).to.eql({
       properties: {
@@ -33,7 +33,7 @@ describe('options', function () {
         bar: true
       },
       additionalProperties: false
-    })
+    });
 
     const result2 = merger({
       allOf: [
@@ -44,10 +44,10 @@ describe('options', function () {
           additionalProperties: true
         }
       ]
-    })
+    });
 
-    expect(result2).to.eql({})
-  })
+    expect(result2).to.eql({});
+  });
 
   it('ignoreAdditionalProperties is true, also allows merging of patternProperties', function () {
     const result = merger(
@@ -76,7 +76,7 @@ describe('options', function () {
       {
         ignoreAdditionalProperties: true
       }
-    )
+    );
 
     expect(result).to.eql({
       properties: {
@@ -88,7 +88,7 @@ describe('options', function () {
         '123$': true
       },
       additionalProperties: false
-    })
+    });
 
     const result2 = merger({
       allOf: [
@@ -99,10 +99,10 @@ describe('options', function () {
           additionalProperties: true
         }
       ]
-    })
+    });
 
-    expect(result2).to.eql({})
-  })
+    expect(result2).to.eql({});
+  });
 
   it('throws if no resolver found for unknown keyword', function () {
     expect(function () {
@@ -113,9 +113,9 @@ describe('options', function () {
             foo: 7
           }
         ]
-      })
-    }).to.throw(/no resolver found/i)
-  })
+      });
+    }).to.throw(/no resolver found/i);
+  });
 
   it('uses supplied resolver for unknown keyword', function () {
     const result = merger(
@@ -130,16 +130,16 @@ describe('options', function () {
       {
         resolvers: {
           foo: function (values) {
-            return values.pop()
+            return values.pop();
           }
         }
       }
-    )
+    );
 
     expect(result).to.eql({
       foo: 7
-    })
-  })
+    });
+  });
 
   it('uses default merger if no resolver found', function () {
     const result = merger(
@@ -154,16 +154,16 @@ describe('options', function () {
       {
         resolvers: {
           defaultResolver: function (values) {
-            return values.pop()
+            return values.pop();
           }
         }
       }
-    )
+    );
 
     expect(result).to.eql({
       foo: 7
-    })
-  })
+    });
+  });
 
   it('merges deep by default', function () {
     const result = merger({
@@ -183,7 +183,7 @@ describe('options', function () {
           }
         }
       ]
-    })
+    });
 
     expect(result).to.eql({
       properties: {
@@ -194,8 +194,8 @@ describe('options', function () {
           }
         }
       }
-    })
-  })
+    });
+  });
 
   it("doesn't merge deep when deep is false", function () {
     const result = merger(
@@ -218,7 +218,7 @@ describe('options', function () {
         ]
       },
       { deep: false }
-    )
+    );
 
     expect(result).to.eql({
       properties: {
@@ -233,6 +233,6 @@ describe('options', function () {
           ]
         }
       }
-    })
-  })
-})
+    });
+  });
+});

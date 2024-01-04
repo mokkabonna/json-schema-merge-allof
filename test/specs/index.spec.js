@@ -1,22 +1,22 @@
-const chai = require('chai')
-const mergerModule = require('../../src')
-const Ajv = require('ajv').default
-const _ = require('lodash')
-const $RefParser = require('json-schema-ref-parser')
+const chai = require('chai');
+const mergerModule = require('../../src');
+const Ajv = require('ajv').default;
+const _ = require('lodash');
+const $RefParser = require('json-schema-ref-parser');
 
-const expect = chai.expect
-const ajv = new Ajv()
+const expect = chai.expect;
+const ajv = new Ajv();
 
 function merger(schema, options) {
-  const result = mergerModule(schema, options)
+  const result = mergerModule(schema, options);
   try {
     if (!ajv.validateSchema(result)) {
-      throw new Error("Schema returned by resolver isn't valid.")
+      throw new Error("Schema returned by resolver isn't valid.");
     }
-    return result
+    return result;
   } catch (e) {
     if (!/stack/i.test(e.message)) {
-      throw e
+      throw e;
     }
   }
 }
@@ -31,7 +31,7 @@ describe('module', function () {
           }
         }
       ]
-    }
+    };
     const result = merger({
       properties: {
         list: {
@@ -39,7 +39,7 @@ describe('module', function () {
         }
       },
       allOf: [commonSchema]
-    })
+    });
 
     expect(result).to.eql({
       properties: {
@@ -52,8 +52,8 @@ describe('module', function () {
         },
         test: true
       }
-    })
-  })
+    });
+  });
 
   it('does not alter original schema', () => {
     const schema = {
@@ -64,17 +64,17 @@ describe('module', function () {
           }
         }
       ]
-    }
+    };
 
-    const result = merger(schema)
+    const result = merger(schema);
 
     expect(result).to.eql({
       properties: {
         test: true
       }
-    })
+    });
 
-    expect(result).not.to.equal(schema) // not strict equal (identity)
+    expect(result).not.to.equal(schema); // not strict equal (identity)
     expect(schema).to.eql({
       allOf: [
         {
@@ -83,8 +83,8 @@ describe('module', function () {
           }
         }
       ]
-    })
-  })
+    });
+  });
 
   it('does not use any original objects or arrays', () => {
     const schema = {
@@ -108,26 +108,26 @@ describe('module', function () {
           }
         }
       ]
-    }
+    };
 
     function innerDeconstruct(schema) {
       const allChildObj = Object.entries(schema).map(([key, val]) => {
-        if (_.isObject(val)) return innerDeconstruct(val)
-        else return undefined
-      })
-      return [schema, ..._.flatten(allChildObj)]
+        if (_.isObject(val)) return innerDeconstruct(val);
+        else return undefined;
+      });
+      return [schema, ..._.flatten(allChildObj)];
     }
 
     const getAllObjects = (schema) =>
-      _(innerDeconstruct(schema)).compact().value()
-    const inputObjects = getAllObjects(schema)
+      _(innerDeconstruct(schema)).compact().value();
+    const inputObjects = getAllObjects(schema);
 
-    const result = merger(schema)
-    const resultObjects = getAllObjects(result)
+    const result = merger(schema);
+    const resultObjects = getAllObjects(result);
 
-    const commonObjects = _.intersection(inputObjects, resultObjects)
-    expect(commonObjects).to.have.length(0)
-  })
+    const commonObjects = _.intersection(inputObjects, resultObjects);
+    expect(commonObjects).to.have.length(0);
+  });
 
   it('combines simple usecase', function () {
     const result = merger({
@@ -141,14 +141,14 @@ describe('module', function () {
           maxLength: 5
         }
       ]
-    })
+    });
 
     expect(result).to.eql({
       type: 'string',
       minLength: 1,
       maxLength: 5
-    })
-  })
+    });
+  });
 
   it('combines without allOf', function () {
     const result = merger({
@@ -157,7 +157,7 @@ describe('module', function () {
           type: 'string'
         }
       }
-    })
+    });
 
     expect(result).to.eql({
       properties: {
@@ -165,8 +165,8 @@ describe('module', function () {
           type: 'string'
         }
       }
-    })
-  })
+    });
+  });
 
   describe('simple resolve functionality', function () {
     it('merges with default resolver if not defined resolver', function () {
@@ -180,11 +180,11 @@ describe('module', function () {
             title: 'schema3'
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         title: 'schema1'
-      })
+      });
 
       const result3 = merger({
         allOf: [
@@ -195,12 +195,12 @@ describe('module', function () {
             title: 'schema3'
           }
         ]
-      })
+      });
 
       expect(result3).to.eql({
         title: 'schema2'
-      })
-    })
+      });
+    });
 
     it('merges minLength if conflict', function () {
       const result = merger({
@@ -212,12 +212,12 @@ describe('module', function () {
             minLength: 5
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         minLength: 5
-      })
-    })
+      });
+    });
 
     it('merges minimum if conflict', function () {
       const result = merger({
@@ -229,12 +229,12 @@ describe('module', function () {
             minimum: 5
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         minimum: 5
-      })
-    })
+      });
+    });
 
     it('merges exclusiveMinimum if conflict', function () {
       const result = merger({
@@ -246,12 +246,12 @@ describe('module', function () {
             exclusiveMinimum: 5
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         exclusiveMinimum: 5
-      })
-    })
+      });
+    });
 
     it('merges minItems if conflict', function () {
       const result = merger({
@@ -263,12 +263,12 @@ describe('module', function () {
             minItems: 5
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         minItems: 5
-      })
-    })
+      });
+    });
 
     it('merges maximum if conflict', function () {
       const result = merger({
@@ -280,12 +280,12 @@ describe('module', function () {
             maximum: 5
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         maximum: 1
-      })
-    })
+      });
+    });
 
     it('merges exclusiveMaximum if conflict', function () {
       const result = merger({
@@ -297,12 +297,12 @@ describe('module', function () {
             exclusiveMaximum: 5
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         exclusiveMaximum: 1
-      })
-    })
+      });
+    });
 
     it('merges maxItems if conflict', function () {
       const result = merger({
@@ -314,12 +314,12 @@ describe('module', function () {
             maxItems: 5
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         maxItems: 1
-      })
-    })
+      });
+    });
 
     it('merges maxLength if conflict', function () {
       const result = merger({
@@ -331,12 +331,12 @@ describe('module', function () {
             maxLength: 5
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         maxLength: 4
-      })
-    })
+      });
+    });
 
     it('merges uniqueItems to most restrictive if conflict', function () {
       const result = merger({
@@ -348,11 +348,11 @@ describe('module', function () {
             uniqueItems: false
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         uniqueItems: true
-      })
+      });
 
       expect(
         merger({
@@ -367,8 +367,8 @@ describe('module', function () {
         })
       ).to.eql({
         uniqueItems: false
-      })
-    })
+      });
+    });
 
     it('throws if merging incompatible type', function () {
       expect(function () {
@@ -381,9 +381,9 @@ describe('module', function () {
               type: 'text'
             }
           ]
-        })
-      }).to.throw(/incompatible/)
-    })
+        });
+      }).to.throw(/incompatible/);
+    });
 
     it('merges type if conflict', function () {
       const result = merger({
@@ -399,11 +399,11 @@ describe('module', function () {
             type: ['null', 'string']
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         type: ['string', 'null']
-      })
+      });
 
       const result2 = merger({
         allOf: [
@@ -418,11 +418,11 @@ describe('module', function () {
             type: ['null', 'string']
           }
         ]
-      })
+      });
 
       expect(result2).to.eql({
         type: 'string'
-      })
+      });
 
       expect(function () {
         merger({
@@ -434,9 +434,9 @@ describe('module', function () {
               type: ['text', 'object']
             }
           ]
-        })
-      }).to.throw(/incompatible/)
-    })
+        });
+      }).to.throw(/incompatible/);
+    });
 
     it('merges enum', function () {
       const result = merger({
@@ -452,12 +452,12 @@ describe('module', function () {
             enum: ['null', 'string', {}, [3], [1], null]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         enum: [[1], {}, 'string']
-      })
-    })
+      });
+    });
 
     it('throws if enum is incompatible', function () {
       expect(function () {
@@ -471,8 +471,8 @@ describe('module', function () {
               enum: [{}, 'string']
             }
           ]
-        })
-      }).not.to.throw(/incompatible/)
+        });
+      }).not.to.throw(/incompatible/);
 
       expect(function () {
         merger({
@@ -485,9 +485,9 @@ describe('module', function () {
               enum: [[], false]
             }
           ]
-        })
-      }).to.throw(/incompatible/)
-    })
+        });
+      }).to.throw(/incompatible/);
+    });
 
     it('merges const', function () {
       const result = merger({
@@ -500,12 +500,12 @@ describe('module', function () {
             const: ['string', {}]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         const: ['string', {}]
-      })
-    })
+      });
+    });
 
     it('merges anyOf', function () {
       const result = merger({
@@ -528,7 +528,7 @@ describe('module', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         anyOf: [
@@ -539,8 +539,8 @@ describe('module', function () {
             required: ['123', '456']
           }
         ]
-      })
-    })
+      });
+    });
 
     it('merges anyOf by finding valid combinations', function () {
       const result = merger({
@@ -566,7 +566,7 @@ describe('module', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         anyOf: [
@@ -580,8 +580,8 @@ describe('module', function () {
             type: ['object', 'null']
           }
         ]
-      })
-    })
+      });
+    });
 
     it.skip('extracts common logic', function () {
       const result = merger({
@@ -610,7 +610,7 @@ describe('module', function () {
             ]
           }
         ]
-      })
+      });
 
       // TODO I think this is correct
       // TODO implement functionality
@@ -622,8 +622,8 @@ describe('module', function () {
             type: 'string'
           }
         ]
-      })
-    })
+      });
+    });
 
     it.skip('merges anyOf into main schema if left with only one combination', function () {
       const result = merger({
@@ -647,12 +647,12 @@ describe('module', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         required: ['abc', '123']
-      })
-    })
+      });
+    });
 
     it('merges nested allOf if inside singular anyOf', function () {
       const result = merger({
@@ -680,7 +680,7 @@ describe('module', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         anyOf: [
@@ -691,8 +691,8 @@ describe('module', function () {
             required: ['123', '456', '768']
           }
         ]
-      })
-    })
+      });
+    });
 
     it('throws if no intersection at all', function () {
       expect(function () {
@@ -713,8 +713,8 @@ describe('module', function () {
               ]
             }
           ]
-        })
-      }).to.throw(/incompatible/)
+        });
+      }).to.throw(/incompatible/);
 
       expect(function () {
         merger({
@@ -734,9 +734,9 @@ describe('module', function () {
               ]
             }
           ]
-        })
-      }).to.throw(/incompatible/)
-    })
+        });
+      }).to.throw(/incompatible/);
+    });
 
     it('merges more complex oneOf', function () {
       const result = merger({
@@ -764,7 +764,7 @@ describe('module', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         oneOf: [
@@ -785,8 +785,8 @@ describe('module', function () {
             required: ['abc']
           }
         ]
-      })
-    })
+      });
+    });
 
     it('merges nested allOf if inside singular oneOf', function () {
       const result = merger({
@@ -808,7 +808,7 @@ describe('module', function () {
             type: ['array', 'string']
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         type: ['array', 'string'],
@@ -817,8 +817,8 @@ describe('module', function () {
             required: ['123', '768']
           }
         ]
-      })
-    })
+      });
+    });
 
     it('merges nested allOf if inside multiple oneOf', function () {
       const result = merger({
@@ -848,7 +848,7 @@ describe('module', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         type: ['array', 'string'],
@@ -857,8 +857,8 @@ describe('module', function () {
             type: 'object'
           }
         ]
-      })
-    })
+      });
+    });
 
     it.skip('throws if no compatible when merging oneOf', function () {
       expect(function () {
@@ -880,8 +880,8 @@ describe('module', function () {
               ]
             }
           ]
-        })
-      }).to.throw(/incompatible/)
+        });
+      }).to.throw(/incompatible/);
 
       expect(function () {
         merger({
@@ -909,9 +909,9 @@ describe('module', function () {
               ]
             }
           ]
-        })
-      }).to.throw(/incompatible/)
-    })
+        });
+      }).to.throw(/incompatible/);
+    });
 
     // not ready to implement this yet
     it.skip('merges singular oneOf', function () {
@@ -961,7 +961,7 @@ describe('module', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         properties: {
@@ -970,8 +970,8 @@ describe('module', function () {
             minLength: 15
           }
         }
-      })
-    })
+      });
+    });
 
     it('merges not using allOf', function () {
       const result = merger({
@@ -995,7 +995,7 @@ describe('module', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         not: {
@@ -1016,8 +1016,8 @@ describe('module', function () {
             }
           ]
         }
-      })
-    })
+      });
+    });
 
     it('merges contains', function () {
       const result = merger({
@@ -1044,7 +1044,7 @@ describe('module', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         contains: {
@@ -1055,8 +1055,8 @@ describe('module', function () {
             }
           }
         }
-      })
-    })
+      });
+    });
 
     it('merges pattern using allOf', function () {
       const result = merger({
@@ -1069,11 +1069,11 @@ describe('module', function () {
             pattern: 'abba'
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         pattern: '(?=fdsaf)(?=abba)'
-      })
+      });
 
       const result2 = merger({
         allOf: [
@@ -1081,14 +1081,14 @@ describe('module', function () {
             pattern: 'abba'
           }
         ]
-      })
+      });
 
       expect(result2).to.eql({
         pattern: 'abba'
-      })
-    })
+      });
+    });
 
-    it('extracts pattern from anyOf and oneOf using | operator in regexp')
+    it('extracts pattern from anyOf and oneOf using | operator in regexp');
 
     it.skip('merges multipleOf using allOf or direct assignment', function () {
       const result = merger({
@@ -1103,7 +1103,7 @@ describe('module', function () {
             multipleOf: 3
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         type: 'integer',
@@ -1116,7 +1116,7 @@ describe('module', function () {
             multipleOf: 3
           }
         ]
-      })
+      });
 
       const result2 = merger({
         allOf: [
@@ -1124,12 +1124,12 @@ describe('module', function () {
             multipleOf: 1
           }
         ]
-      })
+      });
 
       expect(result2).to.eql({
         multipleOf: 1
-      })
-    })
+      });
+    });
 
     it('merges multipleOf by finding lowest common multiple (LCM)', function () {
       const result = merger({
@@ -1172,11 +1172,11 @@ describe('module', function () {
             multipleOf: 0.3
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         multipleOf: 6
-      })
+      });
 
       expect(
         merger({
@@ -1194,7 +1194,7 @@ describe('module', function () {
         })
       ).to.eql({
         multipleOf: 60
-      })
+      });
 
       expect(
         merger({
@@ -1212,7 +1212,7 @@ describe('module', function () {
         })
       ).to.eql({
         multipleOf: 21
-      })
+      });
 
       expect(
         merger({
@@ -1227,7 +1227,7 @@ describe('module', function () {
         })
       ).to.eql({
         multipleOf: 2
-      })
+      });
 
       expect(
         merger({
@@ -1245,7 +1245,7 @@ describe('module', function () {
         })
       ).to.eql({
         multipleOf: 3
-      })
+      });
 
       expect(
         merger({
@@ -1263,7 +1263,7 @@ describe('module', function () {
         })
       ).to.eql({
         multipleOf: 21
-      })
+      });
 
       expect(
         merger({
@@ -1281,7 +1281,7 @@ describe('module', function () {
         })
       ).to.eql({
         multipleOf: 42
-      })
+      });
 
       expect(
         merger({
@@ -1299,7 +1299,7 @@ describe('module', function () {
         })
       ).to.eql({
         multipleOf: 13
-      })
+      });
 
       expect(
         merger({
@@ -1317,9 +1317,9 @@ describe('module', function () {
         })
       ).to.eql({
         multipleOf: 1000000
-      })
-    })
-  })
+      });
+    });
+  });
 
   describe('merging arrays', function () {
     it('merges required object', function () {
@@ -1334,8 +1334,8 @@ describe('module', function () {
         })
       ).to.eql({
         required: ['prop1', 'prop2']
-      })
-    })
+      });
+    });
 
     it('merges default value', function () {
       expect(
@@ -1359,8 +1359,8 @@ describe('module', function () {
             prop1: 'foo'
           }
         ]
-      })
-    })
+      });
+    });
 
     it('merges default value', function () {
       expect(
@@ -1378,9 +1378,9 @@ describe('module', function () {
         default: {
           foo: 'bar'
         }
-      })
-    })
-  })
+      });
+    });
+  });
 
   describe('merging objects', function () {
     it('merges child objects', function () {
@@ -1423,8 +1423,8 @@ describe('module', function () {
             type: 'integer'
           }
         }
-      })
-    })
+      });
+    });
 
     it('merges boolean schemas', function () {
       expect(
@@ -1465,7 +1465,7 @@ describe('module', function () {
             type: 'integer'
           }
         }
-      })
+      });
 
       expect(
         merger({
@@ -1498,13 +1498,13 @@ describe('module', function () {
             type: 'integer'
           }
         }
-      })
+      });
 
       expect(
         merger({
           allOf: [true, false]
         })
-      ).to.eql(false)
+      ).to.eql(false);
 
       expect(
         merger({
@@ -1534,8 +1534,8 @@ describe('module', function () {
             type: 'integer'
           }
         }
-      })
-    })
+      });
+    });
 
     it('merges all allOf', function () {
       expect(
@@ -1611,9 +1611,9 @@ describe('module', function () {
             maximum: 10
           }
         }
-      })
-    })
-  })
+      });
+    });
+  });
 
   describe.skip('merging definitions', function () {
     it('merges circular', function () {
@@ -1647,9 +1647,9 @@ describe('module', function () {
             ]
           }
         }
-      }
+      };
 
-      schema.properties.person.properties.child = schema.properties.person
+      schema.properties.person.properties.child = schema.properties.person;
 
       const expected = {
         person: {
@@ -1664,16 +1664,16 @@ describe('module', function () {
             }
           }
         }
-      }
+      };
 
-      expected.person.properties.child = expected.person
+      expected.person.properties.child = expected.person;
 
-      const result = merger(schema)
+      const result = merger(schema);
 
       expect(result).to.eql({
         properties: expected
-      })
-    })
+      });
+    });
 
     it('merges any definitions and circular', function () {
       const schema = {
@@ -1714,7 +1714,7 @@ describe('module', function () {
             ]
           }
         }
-      }
+      };
 
       return $RefParser.dereference(schema).then(function (dereferenced) {
         const expected = {
@@ -1730,28 +1730,28 @@ describe('module', function () {
               }
             }
           }
-        }
+        };
 
-        expected.person.properties.child = expected.person
+        expected.person.properties.child = expected.person;
 
-        const result = merger(schema)
+        const result = merger(schema);
 
         expect(result).to.eql({
           properties: expected,
           definitions: expected
-        })
+        });
 
-        expect(result).to.equal(dereferenced)
+        expect(result).to.equal(dereferenced);
 
         expect(result.properties.person.properties.child).to.equal(
           result.definitions.person.properties.child
-        )
+        );
         expect(result.properties.person.properties.child).to.equal(
           dereferenced.properties.person
-        )
-      })
-    })
-  })
+        );
+      });
+    });
+  });
 
   describe('dependencies', function () {
     it('merges simliar schemas', function () {
@@ -1782,7 +1782,7 @@ describe('module', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         dependencies: {
@@ -1792,8 +1792,8 @@ describe('module', function () {
           },
           bar: ['prop1', 'prop2', 'prop4']
         }
-      })
-    })
+      });
+    });
 
     it('merges mixed mode dependency', function () {
       const result = merger({
@@ -1810,7 +1810,7 @@ describe('module', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         dependencies: {
@@ -1819,9 +1819,9 @@ describe('module', function () {
             required: ['abc', 'prop4']
           }
         }
-      })
-    })
-  })
+      });
+    });
+  });
 
   describe('propertyNames', function () {
     it('merges simliar schemas', function () {
@@ -1847,7 +1847,7 @@ describe('module', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         propertyNames: {
@@ -1856,7 +1856,7 @@ describe('module', function () {
           minLength: 5,
           maxLength: 7
         }
-      })
-    })
-  })
-})
+      });
+    });
+  });
+});

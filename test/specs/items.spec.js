@@ -1,6 +1,6 @@
-const chai = require('chai')
-const merger = require('../../src')
-const expect = chai.expect
+const chai = require('chai');
+const merger = require('../../src');
+const expect = chai.expect;
 
 describe('items', function () {
   it('merges additionalItems', function () {
@@ -32,7 +32,7 @@ describe('items', function () {
           }
         }
       ]
-    })
+    });
 
     expect(result).to.eql({
       items: [
@@ -49,8 +49,8 @@ describe('items', function () {
           }
         }
       }
-    })
-  })
+    });
+  });
 
   describe('when single schema', function () {
     it('merges them', function () {
@@ -76,7 +76,7 @@ describe('items', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         items: {
@@ -85,9 +85,9 @@ describe('items', function () {
           minLength: 5,
           maxLength: 7
         }
-      })
-    })
-  })
+      });
+    });
+  });
 
   describe('when array', function () {
     it('merges them in when additionalItems are all undefined', function () {
@@ -119,7 +119,7 @@ describe('items', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         items: [
@@ -131,8 +131,8 @@ describe('items', function () {
             type: 'integer'
           }
         ]
-      })
-    })
+      });
+    });
 
     it('merges in additionalItems from one if present', function () {
       const result = merger({
@@ -167,7 +167,7 @@ describe('items', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         additionalItems: false,
@@ -177,8 +177,8 @@ describe('items', function () {
             minLength: 10
           }
         ]
-      })
-    })
+      });
+    });
 
     it('merges in additionalItems from one if present', function () {
       const result = merger({
@@ -214,7 +214,7 @@ describe('items', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         additionalItems: false,
@@ -224,8 +224,8 @@ describe('items', function () {
             minLength: 10
           }
         ]
-      })
-    })
+      });
+    });
 
     it('merges in additionalItems schema', function () {
       const result = merger({
@@ -267,7 +267,7 @@ describe('items', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         additionalItems: {
@@ -284,9 +284,9 @@ describe('items', function () {
             minimum: 10
           }
         ]
-      })
-    })
-  })
+      });
+    });
+  });
 
   describe('when mixed array and object', function () {
     it('merges in additionalItems schema', function () {
@@ -334,7 +334,7 @@ describe('items', function () {
             ]
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         additionalItems: {
@@ -349,8 +349,8 @@ describe('items', function () {
             maximum: 20
           }
         ]
-      })
-      it('considers additionalItems')
-    })
-  })
-})
+      });
+      it('considers additionalItems');
+    });
+  });
+});

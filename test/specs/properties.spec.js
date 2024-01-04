@@ -1,13 +1,13 @@
-const chai = require('chai')
-const merger = require('../../src')
-const sinon = require('sinon')
-const _ = require('lodash')
-const expect = chai.expect
-const Ajv = require('ajv').default
+const chai = require('chai');
+const merger = require('../../src');
+const sinon = require('sinon');
+const _ = require('lodash');
+const expect = chai.expect;
+const Ajv = require('ajv').default;
 
 const ajv = new Ajv({
   allowMatchingProperties: true
-})
+});
 describe('properties', function () {
   describe('when property name has same as a reserved word', function () {
     it('does not treat it as a reserved word', function () {
@@ -18,7 +18,7 @@ describe('properties', function () {
             minLength: 5
           }
         }
-      })
+      });
 
       merger(
         {
@@ -53,11 +53,11 @@ describe('properties', function () {
             }
           }
         }
-      )
+      );
 
-      sinon.assert.calledOnce(stub)
-    })
-  })
+      sinon.assert.calledOnce(stub);
+    });
+  });
 
   describe('additionalProperties', function () {
     it('allows no extra properties if additionalProperties is false', function () {
@@ -70,12 +70,12 @@ describe('properties', function () {
             additionalProperties: false
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         additionalProperties: false
-      })
-    })
+      });
+    });
 
     it('allows only intersecting properties', function () {
       const result = merger({
@@ -93,15 +93,15 @@ describe('properties', function () {
             additionalProperties: false
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         properties: {
           bar: true
         },
         additionalProperties: false
-      })
-    })
+      });
+    });
 
     it('allows intersecting patternproperties', function () {
       const result = merger({
@@ -123,7 +123,7 @@ describe('properties', function () {
             additionalProperties: false
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         properties: {
@@ -134,8 +134,8 @@ describe('properties', function () {
           '.+\\d+$': true
         },
         additionalProperties: false
-      })
-    })
+      });
+    });
 
     it('disallows all except matching patternProperties if both false', function () {
       const result = merger({
@@ -157,15 +157,15 @@ describe('properties', function () {
             additionalProperties: false
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         properties: {
           foo123: true
         },
         additionalProperties: false
-      })
-    })
+      });
+    });
 
     it('disallows all except matching patternProperties if both false', function () {
       const result = merger({
@@ -193,7 +193,7 @@ describe('properties', function () {
             additionalProperties: false
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         properties: {
@@ -206,8 +206,8 @@ describe('properties', function () {
           }
         },
         additionalProperties: false
-      })
-    })
+      });
+    });
 
     it('disallows all except matching patternProperties if both false', function () {
       const schema = {
@@ -235,10 +235,10 @@ describe('properties', function () {
             additionalProperties: false
           }
         ]
-      }
-      const origSchema = _.cloneDeep(schema)
-      const result = merger(schema)
-      expect(result).not.to.eql(origSchema)
+      };
+      const origSchema = _.cloneDeep(schema);
+      const result = merger(schema);
+      expect(result).not.to.eql(origSchema);
 
       expect(result).to.eql({
         type: 'object',
@@ -248,8 +248,8 @@ describe('properties', function () {
           bar123: true
         },
         additionalProperties: false
-      })
-      ;[
+      });
+      [
         {
           foo123: 'testfdsdfsfd'
         },
@@ -276,9 +276,9 @@ describe('properties', function () {
           foo234: 'testffdsafdsads'
         }
       ].forEach(function (val) {
-        validateInputOutput(origSchema, result, val)
-      })
-    })
+        validateInputOutput(origSchema, result, val);
+      });
+    });
 
     it('disallows all except matching patternProperties if both true', function () {
       const schema = {
@@ -304,10 +304,10 @@ describe('properties', function () {
             }
           }
         ]
-      }
-      const origSchema = _.cloneDeep(schema)
-      const result = merger(schema)
-      expect(result).not.to.eql(origSchema)
+      };
+      const origSchema = _.cloneDeep(schema);
+      const result = merger(schema);
+      expect(result).not.to.eql(origSchema);
 
       expect(result).to.eql({
         type: 'object',
@@ -321,8 +321,8 @@ describe('properties', function () {
           '^bar': true,
           '.+\\d+$': true
         }
-      })
-      ;[
+      });
+      [
         {
           foo123: 'testfdsdfsfd'
         },
@@ -351,9 +351,9 @@ describe('properties', function () {
           foo234: 'testffdsafdsads'
         }
       ].forEach(function (val) {
-        validateInputOutput(origSchema, result, val)
-      })
-    })
+        validateInputOutput(origSchema, result, val);
+      });
+    });
 
     it('disallows all except matching patternProperties if one false', function () {
       const schema = {
@@ -377,10 +377,10 @@ describe('properties', function () {
             additionalProperties: false
           }
         ]
-      }
-      const origSchema = _.cloneDeep(schema)
-      const result = merger(schema)
-      expect(result).not.to.eql(origSchema)
+      };
+      const origSchema = _.cloneDeep(schema);
+      const result = merger(schema);
+      expect(result).not.to.eql(origSchema);
 
       expect(result).to.eql({
         type: 'object',
@@ -393,8 +393,8 @@ describe('properties', function () {
           '.+\\d+$': true
         },
         additionalProperties: false
-      })
-      ;[
+      });
+      [
         {
           foo123: 'testfdsdfsfd'
         },
@@ -423,9 +423,9 @@ describe('properties', function () {
           foo234: 'testffdsafdsads'
         }
       ].forEach(function (val) {
-        validateInputOutput(origSchema, result, val)
-      })
-    })
+        validateInputOutput(origSchema, result, val);
+      });
+    });
 
     it('disallows all if no patternProperties and if both false', function () {
       const result = merger({
@@ -444,12 +444,12 @@ describe('properties', function () {
             additionalProperties: false
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         additionalProperties: false
-      })
-    })
+      });
+    });
 
     it('applies additionalProperties to other schemas properties if they have any', function () {
       const result = merger({
@@ -492,7 +492,7 @@ describe('properties', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         properties: {
@@ -506,8 +506,8 @@ describe('properties', function () {
           }
         },
         additionalProperties: false
-      })
-    })
+      });
+    });
 
     it('considers patternProperties before merging additionalProperties to other schemas properties if they have any', function () {
       const result = merger({
@@ -566,7 +566,7 @@ describe('properties', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         properties: {
@@ -593,8 +593,8 @@ describe('properties', function () {
           }
         },
         additionalProperties: false
-      })
-    })
+      });
+    });
 
     it('combines additionalProperties when schemas', function () {
       const result = merger({
@@ -613,16 +613,16 @@ describe('properties', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         additionalProperties: {
           type: ['string', 'null'],
           maxLength: 8
         }
-      })
-    })
-  })
+      });
+    });
+  });
 
   describe('patternProperties', function () {
     it('merges simliar schemas', function () {
@@ -654,7 +654,7 @@ describe('properties', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         patternProperties: {
@@ -666,9 +666,9 @@ describe('properties', function () {
             type: 'null'
           }
         }
-      })
-    })
-  })
+      });
+    });
+  });
 
   describe('when patternProperties present', function () {
     it('merges patternproperties', function () {
@@ -691,7 +691,7 @@ describe('properties', function () {
             }
           }
         ]
-      })
+      });
 
       expect(result).to.eql({
         patternProperties: {
@@ -700,8 +700,8 @@ describe('properties', function () {
             minLength: 7
           }
         }
-      })
-    })
+      });
+    });
 
     it('merges with properties if matching property name', function () {
       const schema = {
@@ -737,12 +737,12 @@ describe('properties', function () {
             }
           }
         ]
-      }
+      };
 
-      const origSchema = _.cloneDeep(schema)
-      const result = merger(schema)
+      const origSchema = _.cloneDeep(schema);
+      const result = merger(schema);
 
-      expect(result).not.to.eql(origSchema)
+      expect(result).not.to.eql(origSchema);
 
       expect(result).to.eql({
         type: 'object',
@@ -766,8 +766,8 @@ describe('properties', function () {
             minLength: 8
           }
         }
-      })
-      ;[
+      });
+      [
         {
           name: 'test'
         },
@@ -788,14 +788,14 @@ describe('properties', function () {
           name2: 'testffdsafdsads'
         }
       ].forEach(function (val) {
-        validateInputOutput(schema, result, val)
-      })
-    })
-  })
-})
+        validateInputOutput(schema, result, val);
+      });
+    });
+  });
+});
 
 function validateInputOutput(schema, transformedSchema, obj) {
-  const validOriginal = ajv.validate(schema, obj)
-  const validNew = ajv.validate(transformedSchema, obj)
-  expect(validOriginal).to.eql(validNew)
+  const validOriginal = ajv.validate(schema, obj);
+  const validNew = ajv.validate(transformedSchema, obj);
+  expect(validOriginal).to.eql(validNew);
 }
