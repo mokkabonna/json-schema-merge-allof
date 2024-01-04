@@ -8,6 +8,10 @@
   },
   "scripts": {
     "eslint": "eslint src test",
+    "eslint:fix": "npm run eslint -- --fix",
+    "prettier:cli": "prettier src test",
+    "prettier:check": "npm run prettier:cli -- --check",
+    "prettier:fix": "npm run prettier:cli -- --write",
     "pretest": "npm run eslint",
     "test": "c8 --check-coverage --reporter=lcov mocha test/specs",
     "develop-coverage": "nodemon --exec \"npx c8 --reporter lcov mocha test/specs\"",
@@ -51,6 +55,7 @@
   "dependencies": {
     "compute-lcm": "^1.1.2",
     "json-schema-compare": "^0.2.2",
-    "lodash": "^4.17.20"
+    "lodash": "^4.17.20",
+    "prettier": "^3.1.1"
   }
 }

@@ -1,10 +1,17 @@
 module.exports = {
-    extends: 'standard',
-    rules: {
-        'space-before-function-paren': ['error', {
-            anonymous: 'ignore',
-            named: 'ignore',
-            asyncArrow: 'ignore'
-        }]
-    }
-}
+  env: {
+    es2020: true,
+    node: true,
+  },
+  extends: 'eslint:recommended',
+  rules: {
+    'space-before-function-paren': [
+      'error',
+      {
+        anonymous: 'ignore',
+        named: 'ignore',
+        asyncArrow: 'ignore',
+      },
+    ],
+  },
+};
