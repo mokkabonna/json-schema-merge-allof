@@ -1,6 +1,6 @@
-const chai = require('chai');
-const merger = require('../../src');
-const expect = chai.expect;
+import { expect } from 'chai';
+import merger from '../../src';
+const { describe, it } = await import('vitest');
 
 describe('simple resolver', () => {
   it('merges as expected (with enum)', () => {

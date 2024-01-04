@@ -1,6 +1,6 @@
-const chai = require('chai');
-const merger = require('../../src');
-const expect = chai.expect;
+import { describe, it } from 'vitest';
+import { expect } from 'chai';
+import merger from '../../src';
 
 describe('items', function () {
   it('merges additionalItems', function () {
@@ -350,7 +350,8 @@ describe('items', function () {
           }
         ]
       });
-      it('considers additionalItems');
     });
+
+    it('considers additionalItems');
   });
 });

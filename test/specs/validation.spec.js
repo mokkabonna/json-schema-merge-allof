@@ -1,3 +1,4 @@
+import { describe, it } from 'vitest';
 describe('validation', function () {
   it(
     'is false if property is required, but not allowed by patternProperties or additionalProperties'

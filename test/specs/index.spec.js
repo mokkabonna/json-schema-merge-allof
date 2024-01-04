@@ -1,10 +1,10 @@
-const chai = require('chai');
-const mergerModule = require('../../src');
-const Ajv = require('ajv').default;
-const _ = require('lodash');
-const $RefParser = require('json-schema-ref-parser');
+import { describe, it } from 'vitest';
+import { expect } from 'chai';
+import mergerModule from '../../src';
+import Ajv from 'ajv';
+import _, { isObject, flatten, intersection } from 'lodash';
+import { dereference } from 'json-schema-ref-parser';
 
-const expect = chai.expect;
 const ajv = new Ajv();
 
 function merger(schema, options) {
@@ -112,10 +112,10 @@ describe('module', function () {
 
     function innerDeconstruct(schema) {
       const allChildObj = Object.entries(schema).map(([, val]) => {
-        if (_.isObject(val)) return innerDeconstruct(val);
+        if (isObject(val)) return innerDeconstruct(val);
         else return undefined;
       });
-      return [schema, ..._.flatten(allChildObj)];
+      return [schema, ...flatten(allChildObj)];
     }
 
     const getAllObjects = (schema) =>
@@ -125,7 +125,7 @@ describe('module', function () {
     const result = merger(schema);
     const resultObjects = getAllObjects(result);
 
-    const commonObjects = _.intersection(inputObjects, resultObjects);
+    const commonObjects = intersection(inputObjects, resultObjects);
     expect(commonObjects).to.have.length(0);
   });
 
@@ -1716,7 +1716,7 @@ describe('module', function () {
         }
       };
 
-      return $RefParser.dereference(schema).then(function (dereferenced) {
+      return dereference(schema).then(function (dereferenced) {
         const expected = {
           person: {
             properties: {

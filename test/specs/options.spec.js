@@ -1,7 +1,6 @@
-const chai = require('chai');
-const merger = require('../../src');
-
-const expect = chai.expect;
+import { describe, it } from 'vitest';
+import { expect } from 'chai';
+import merger from '../../src';
 
 describe('options', function () {
   it('allows otherwise incompatible properties if option ignoreAdditionalProperties is true', function () {

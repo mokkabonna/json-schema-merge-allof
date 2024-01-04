@@ -1,9 +1,9 @@
-const chai = require('chai');
-const merger = require('../../src');
-const sinon = require('sinon');
-const _ = require('lodash');
-const expect = chai.expect;
-const Ajv = require('ajv').default;
+import { describe, it } from 'vitest';
+import { expect } from 'chai';
+import merger from '../../src';
+import { stub as _stub, assert } from 'sinon';
+import { cloneDeep } from 'lodash';
+import Ajv from 'ajv';
 
 const ajv = new Ajv({
   allowMatchingProperties: true
@@ -11,7 +11,7 @@ const ajv = new Ajv({
 describe('properties', function () {
   describe('when property name has same as a reserved word', function () {
     it('does not treat it as a reserved word', function () {
-      const stub = sinon.stub().returns({
+      const stub = _stub().returns({
         properties: {
           properties: {
             type: 'string',
@@ -55,7 +55,7 @@ describe('properties', function () {
         }
       );
 
-      sinon.assert.calledOnce(stub);
+      assert.calledOnce(stub);
     });
   });
 
@@ -236,7 +236,7 @@ describe('properties', function () {
           }
         ]
       };
-      const origSchema = _.cloneDeep(schema);
+      const origSchema = cloneDeep(schema);
       const result = merger(schema);
       expect(result).not.to.eql(origSchema);
 
@@ -305,7 +305,7 @@ describe('properties', function () {
           }
         ]
       };
-      const origSchema = _.cloneDeep(schema);
+      const origSchema = cloneDeep(schema);
       const result = merger(schema);
       expect(result).not.to.eql(origSchema);
 
@@ -378,7 +378,7 @@ describe('properties', function () {
           }
         ]
       };
-      const origSchema = _.cloneDeep(schema);
+      const origSchema = cloneDeep(schema);
       const result = merger(schema);
       expect(result).not.to.eql(origSchema);
 
@@ -739,7 +739,7 @@ describe('properties', function () {
         ]
       };
 
-      const origSchema = _.cloneDeep(schema);
+      const origSchema = cloneDeep(schema);
       const result = merger(schema);
 
       expect(result).not.to.eql(origSchema);

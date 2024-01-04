@@ -1,10 +1,7 @@
 {
-  "globals": {
-    "describe": true,
-    "it": true,
-    "beforeEach": true,
-    "afterEach": true,
-    "before": true,
-    "after": true
-  }
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "extends": "eslint:recommended"
 }
