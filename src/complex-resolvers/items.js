@@ -1,17 +1,9 @@
-
 const compare = require('json-schema-compare')
 const forEach = require('lodash/forEach')
-const {
-  allUniqueKeys,
-  deleteUndefinedProps,
-  has,
-  isSchema,
-  notUndefined,
-  uniqWith
-} = require('../common')
+const { allUniqueKeys, deleteUndefinedProps, has, isSchema, notUndefined, uniqWith } = require('../common')
 
 function removeFalseSchemasFromArray(target) {
-  forEach(target, function(schema, index) {
+  forEach(target, function (schema, index) {
     if (schema === false) {
       target.splice(index, 1)
     }
@@ -19,7 +11,7 @@ function removeFalseSchemasFromArray(target) {
 }
 
 function getItemSchemas(subSchemas, key) {
-  return subSchemas.map(function(sub) {
+  return subSchemas.map(function (sub) {
     if (!sub) {
       return undefined
     }
@@ -40,7 +32,7 @@ function getItemSchemas(subSchemas, key) {
 }
 
 function getAdditionalSchemas(subSchemas) {
-  return subSchemas.map(function(sub) {
+  return subSchemas.map(function (sub) {
     if (!sub) {
       return undefined
     }
@@ -54,7 +46,7 @@ function getAdditionalSchemas(subSchemas) {
 // Provide source when array
 function mergeItems(group, mergeSchemas, items) {
   const allKeys = allUniqueKeys(items)
-  return allKeys.reduce(function(all, key) {
+  return allKeys.reduce(function (all, key) {
     const schemas = getItemSchemas(group, key)
     const compacted = uniqWith(schemas.filter(notUndefined), compare)
     all[key] = mergeSchemas(compacted, key)

@@ -6,9 +6,11 @@ describe('simple resolver', () => {
   it('merges as expected (with enum)', () => {
     const result = merger({
       enum: [1, 2],
-      allOf: [{
-        enum: [2, 3]
-      }]
+      allOf: [
+        {
+          enum: [2, 3]
+        }
+      ]
     })
 
     expect(result).to.eql({
@@ -24,11 +26,14 @@ describe('simple resolver', () => {
           expect(paths).to.eql(['enum'])
 
           // inner merge test
-          const innerSchemas = [{
-            minLength: 1
-          }, {
-            minLength: 7
-          }]
+          const innerSchemas = [
+            {
+              minLength: 1
+            },
+            {
+              minLength: 7
+            }
+          ]
 
           const innerResult = mergeSchemas(innerSchemas)
           expect(innerResult).to.eql({
@@ -40,12 +45,17 @@ describe('simple resolver', () => {
       }
     }
 
-    const resultCustom = merger({
-      enum: [1, 2],
-      allOf: [{
-        enum: [2, 3]
-      }]
-    }, opts)
+    const resultCustom = merger(
+      {
+        enum: [1, 2],
+        allOf: [
+          {
+            enum: [2, 3]
+          }
+        ]
+      },
+      opts
+    )
 
     expect(resultCustom).to.eql({
       enum: [5]
@@ -62,8 +72,7 @@ describe('simple resolver', () => {
             // test with same if-then-else resolver
             keywords: conditonalRelated,
             resolver(schemas, paths, mergers, options) {
-              const allWithConditional = schemas.filter(schema =>
-                conditonalRelated.some(keyword => has(schema, keyword)))
+              const allWithConditional = schemas.filter(schema => conditonalRelated.some(keyword => has(schema, keyword)))
 
               // merge sub schemas completely
               // if,then,else must not be merged to the base schema, but if they contain allOf themselves, that should be merged
@@ -86,15 +95,20 @@ describe('simple resolver', () => {
         }
       }
 
-      const resultCustom = merger({
-        allOf: [{
-          if: {
-            required: ['def']
-          },
-          then: {},
-          else: {}
-        }]
-      }, opts)
+      const resultCustom = merger(
+        {
+          allOf: [
+            {
+              if: {
+                required: ['def']
+              },
+              then: {},
+              else: {}
+            }
+          ]
+        },
+        opts
+      )
 
       expect(resultCustom).to.eql({
         if: {

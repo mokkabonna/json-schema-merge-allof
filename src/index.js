@@ -17,13 +17,13 @@ const propertiesResolver = require('./complex-resolvers/properties')
 const itemsResolver = require('./complex-resolvers/items')
 
 const contains = (arr, val) => arr.indexOf(val) !== -1
-const isSchema = (val) => isPlainObject(val) || val === true || val === false
-const isFalse = (val) => val === false
-const isTrue = (val) => val === true
+const isSchema = val => isPlainObject(val) || val === true || val === false
+const isFalse = val => val === false
+const isTrue = val => val === true
 const schemaResolver = (compacted, key, mergeSchemas) => mergeSchemas(compacted)
-const stringArray = (values) => sortBy(uniq(flattenDeep(values)))
-const notUndefined = (val) => val !== undefined
-const allUniqueKeys = (arr) => uniq(flattenDeep(arr.map(keys)))
+const stringArray = values => sortBy(uniq(flattenDeep(values)))
+const notUndefined = val => val !== undefined
+const allUniqueKeys = arr => uniq(flattenDeep(arr.map(keys)))
 
 // resolvers
 const first = compacted => compacted[0]
@@ -34,10 +34,13 @@ const uniqueItems = compacted => compacted.some(isTrue)
 const examples = compacted => uniqWith(flatten(compacted), isEqual)
 
 function compareProp(key) {
-  return function(a, b) {
-    return compare({
-      [key]: a
-    }, { [key]: b })
+  return function (a, b) {
+    return compare(
+      {
+        [key]: a
+      },
+      { [key]: b }
+    )
   }
 }
 
@@ -52,13 +55,15 @@ function getValues(schemas, key) {
 }
 
 function tryMergeSchemaGroups(schemaGroups, mergeSchemas) {
-  return schemaGroups.map(function(schemas, index) {
-    try {
-      return mergeSchemas(schemas, index)
-    } catch (e) {
-      return undefined
-    }
-  }).filter(notUndefined)
+  return schemaGroups
+    .map(function (schemas, index) {
+      try {
+        return mergeSchemas(schemas, index)
+      } catch (e) {
+        return undefined
+      }
+    })
+    .filter(notUndefined)
 }
 
 function keys(obj) {
@@ -78,17 +83,22 @@ function getAnyOfCombinations(arrOfArrays, combinations) {
   const values = arrOfArrays.slice(0).shift()
   const rest = arrOfArrays.slice(1)
   if (combinations.length) {
-    return getAnyOfCombinations(rest, flatten(combinations.map(combination => values.map(item => ([item].concat(combination))))))
+    return getAnyOfCombinations(rest, flatten(combinations.map(combination => values.map(item => [item].concat(combination)))))
   }
-  return getAnyOfCombinations(rest, values.map(item => (item)))
+  return getAnyOfCombinations(
+    rest,
+    values.map(item => item)
+  )
 }
 
 function throwIncompatible(values, paths) {
   let asJSON
   try {
-    asJSON = values.map(function(val) {
-      return JSON.stringify(val, null, 2)
-    }).join('\n')
+    asJSON = values
+      .map(function (val) {
+        return JSON.stringify(val, null, 2)
+      })
+      .join('\n')
   } catch (variable) {
     asJSON = values.join(', ')
   }
@@ -104,17 +114,22 @@ function callGroupResolver(complexKeywords, resolverName, schemas, mergeSchemas,
 
     // extract all keywords from all the schemas that have one or more
     // then remove all undefined ones and not unique
-    const extractedKeywordsOnly = schemas.map(schema => complexKeywords.reduce((all, key) => {
-      if (schema[key] !== undefined) all[key] = schema[key]
-      return all
-    }, {}))
+    const extractedKeywordsOnly = schemas.map(schema =>
+      complexKeywords.reduce((all, key) => {
+        if (schema[key] !== undefined) all[key] = schema[key]
+        return all
+      }, {})
+    )
     const unique = uniqWith(extractedKeywordsOnly, compare)
 
     // create mergers that automatically add the path of the keyword for use in the complex resolver
-    const mergers = resolverConfig.keywords.reduce((all, key) => ({
-      ...all,
-      [key]: (schemas, extraKey = []) => mergeSchemas(schemas, null, parents.concat(key, extraKey))
-    }), {})
+    const mergers = resolverConfig.keywords.reduce(
+      (all, key) => ({
+        ...all,
+        [key]: (schemas, extraKey = []) => mergeSchemas(schemas, null, parents.concat(key, extraKey))
+      }),
+      {}
+    )
 
     const result = resolverConfig.resolver(unique, parents.concat(resolverName), mergers, options)
 
@@ -132,22 +147,13 @@ function createRequiredMetaArray(arr) {
 
 const schemaGroupProps = ['properties', 'patternProperties', 'definitions', 'dependencies']
 const schemaArrays = ['anyOf', 'oneOf']
-const schemaProps = [
-  'additionalProperties',
-  'additionalItems',
-  'contains',
-  'propertyNames',
-  'not',
-  'items'
-]
+const schemaProps = ['additionalProperties', 'additionalItems', 'contains', 'propertyNames', 'not', 'items']
 
 const defaultResolvers = {
   type(compacted) {
     if (compacted.some(Array.isArray)) {
-      const normalized = compacted.map(function(val) {
-        return Array.isArray(val)
-          ? val
-          : [val]
+      const normalized = compacted.map(function (val) {
+        return Array.isArray(val) ? val : [val]
       })
       const common = intersection.apply(null, normalized)
 
@@ -161,7 +167,7 @@ const defaultResolvers = {
   dependencies(compacted, paths, mergeSchemas) {
     const allChildren = allUniqueKeys(compacted)
 
-    return allChildren.reduce(function(all, childKey) {
+    return allChildren.reduce(function (all, childKey) {
       const childSchemas = getValues(compacted, childKey)
       let innerCompacted = uniqWith(childSchemas.filter(notUndefined), isEqual)
 
@@ -264,9 +270,7 @@ function merger(rootSchema, options, totalSchemas) {
   function mergeSchemas(schemas, base, parents) {
     schemas = cloneDeep(schemas.filter(notUndefined))
     parents = parents || []
-    const merged = isPlainObject(base)
-      ? base
-      : {}
+    const merged = isPlainObject(base) ? base : {}
 
     // return undefined, an empty schema
     if (!schemas.length) {
@@ -286,19 +290,22 @@ function merger(rootSchema, options, totalSchemas) {
 
     const allKeys = allUniqueKeys(schemas)
     if (options.deep && contains(allKeys, 'allOf')) {
-      return merger({
-        allOf: schemas
-      }, options, totalSchemas)
+      return merger(
+        {
+          allOf: schemas
+        },
+        options,
+        totalSchemas
+      )
     }
 
-    const complexKeysArr = complexResolvers.map(([mainKeyWord, resolverConf]) =>
-      allKeys.filter(k => resolverConf.keywords.includes(k)))
+    const complexKeysArr = complexResolvers.map(([mainKeyWord, resolverConf]) => allKeys.filter(k => resolverConf.keywords.includes(k)))
 
     // remove all complex keys before simple resolvers
     complexKeysArr.forEach(keys => pullAll(allKeys, keys))
 
     // call all simple resolvers for relevant keywords
-    allKeys.forEach(function(key) {
+    allKeys.forEach(function (key) {
       const values = getValues(schemas, key)
       const compacted = uniqWith(values.filter(notUndefined), compareProp(key))
 
@@ -311,7 +318,12 @@ function merger(rootSchema, options, totalSchemas) {
         merged[key] = compacted[0]
       } else {
         const resolver = options.resolvers[key] || options.resolvers.defaultResolver
-        if (!resolver) throw new Error('No resolver found for key ' + key + '. You can provide a resolver for this keyword in the options, or provide a default resolver.')
+        if (!resolver)
+          throw new Error(
+            'No resolver found for key ' +
+              key +
+              '. You can provide a resolver for this keyword in the options, or provide a default resolver.'
+          )
 
         const merger = (schemas, extraKey = []) => mergeSchemas(schemas, null, parents.concat(key, extraKey))
         merged[key] = resolver(compacted, parents.concat(key), merger, options)
@@ -324,10 +336,13 @@ function merger(rootSchema, options, totalSchemas) {
       }
     })
 
-    return complexResolvers.reduce((all, [resolverKeyword, config], index) => ({
-      ...all,
-      ...callGroupResolver(complexKeysArr[index], resolverKeyword, schemas, mergeSchemas, options, parents)
-    }), merged)
+    return complexResolvers.reduce(
+      (all, [resolverKeyword, config], index) => ({
+        ...all,
+        ...callGroupResolver(complexKeysArr[index], resolverKeyword, schemas, mergeSchemas, options, parents)
+      }),
+      merged
+    )
   }
 
   const allSchemas = flattenDeep(getAllOf(rootSchema))

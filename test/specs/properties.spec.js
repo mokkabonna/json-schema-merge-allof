@@ -8,9 +8,9 @@ const Ajv = require('ajv').default
 const ajv = new Ajv({
   allowMatchingProperties: true
 })
-describe('properties', function() {
-  describe('when property name has same as a reserved word', function() {
-    it('does not treat it as a reserved word', function() {
+describe('properties', function () {
+  describe('when property name has same as a reserved word', function () {
+    it('does not treat it as a reserved word', function () {
       const stub = sinon.stub().returns({
         properties: {
           properties: {
@@ -20,43 +20,52 @@ describe('properties', function() {
         }
       })
 
-      merger({
-        allOf: [{
-          properties: {
-            properties: {
-              type: 'string',
-              minLength: 5
+      merger(
+        {
+          allOf: [
+            {
+              properties: {
+                properties: {
+                  type: 'string',
+                  minLength: 5
+                }
+              }
+            },
+            {
+              properties: {
+                properties: {
+                  type: 'string',
+                  minLength: 7
+                }
+              }
             }
-          }
-        }, {
-          properties: {
+          ]
+        },
+        {
+          complexResolvers: {
             properties: {
-              type: 'string',
-              minLength: 7
+              keywords: ['properties', 'patternProperties', 'additionalProperties'],
+              resolver: stub
             }
-          }
-        }]
-      }, {
-        complexResolvers: {
-          properties: {
-            keywords: ['properties', 'patternProperties', 'additionalProperties'],
-            resolver: stub
           }
         }
-      })
+      )
 
       sinon.assert.calledOnce(stub)
     })
   })
 
-  describe('additionalProperties', function() {
-    it('allows no extra properties if additionalProperties is false', function() {
+  describe('additionalProperties', function () {
+    it('allows no extra properties if additionalProperties is false', function () {
       const result = merger({
-        allOf: [{
-          additionalProperties: true
-        }, {
-          additionalProperties: false
-        }]
+        allOf: [
+          {
+            additionalProperties: true
+          },
+          {
+            additionalProperties: false
+          }
+        ]
       })
 
       expect(result).to.eql({
@@ -64,19 +73,22 @@ describe('properties', function() {
       })
     })
 
-    it('allows only intersecting properties', function() {
+    it('allows only intersecting properties', function () {
       const result = merger({
-        allOf: [{
-          properties: {
-            foo: true
+        allOf: [
+          {
+            properties: {
+              foo: true
+            },
+            additionalProperties: true
           },
-          additionalProperties: true
-        }, {
-          properties: {
-            bar: true
-          },
-          additionalProperties: false
-        }]
+          {
+            properties: {
+              bar: true
+            },
+            additionalProperties: false
+          }
+        ]
       })
 
       expect(result).to.eql({
@@ -87,23 +99,26 @@ describe('properties', function() {
       })
     })
 
-    it('allows intersecting patternproperties', function() {
+    it('allows intersecting patternproperties', function () {
       const result = merger({
-        allOf: [{
-          properties: {
-            foo: true,
-            foo123: true
+        allOf: [
+          {
+            properties: {
+              foo: true,
+              foo123: true
+            },
+            additionalProperties: true
           },
-          additionalProperties: true
-        }, {
-          properties: {
-            bar: true
-          },
-          patternProperties: {
-            '.+\\d+$': true
-          },
-          additionalProperties: false
-        }]
+          {
+            properties: {
+              bar: true
+            },
+            patternProperties: {
+              '.+\\d+$': true
+            },
+            additionalProperties: false
+          }
+        ]
       })
 
       expect(result).to.eql({
@@ -118,23 +133,26 @@ describe('properties', function() {
       })
     })
 
-    it('disallows all except matching patternProperties if both false', function() {
+    it('disallows all except matching patternProperties if both false', function () {
       const result = merger({
-        allOf: [{
-          properties: {
-            foo: true,
-            foo123: true
+        allOf: [
+          {
+            properties: {
+              foo: true,
+              foo123: true
+            },
+            additionalProperties: false
           },
-          additionalProperties: false
-        }, {
-          properties: {
-            bar: true
-          },
-          patternProperties: {
-            '.+\\d+$': true
-          },
-          additionalProperties: false
-        }]
+          {
+            properties: {
+              bar: true
+            },
+            patternProperties: {
+              '.+\\d+$': true
+            },
+            additionalProperties: false
+          }
+        ]
       })
 
       expect(result).to.eql({
@@ -145,29 +163,32 @@ describe('properties', function() {
       })
     })
 
-    it('disallows all except matching patternProperties if both false', function() {
+    it('disallows all except matching patternProperties if both false', function () {
       const result = merger({
-        allOf: [{
-          properties: {
-            foo: true,
-            foo123: true
+        allOf: [
+          {
+            properties: {
+              foo: true,
+              foo123: true
+            },
+            patternProperties: {
+              '.+\\d+$': {
+                type: 'string'
+              }
+            },
+            additionalProperties: false
           },
-          patternProperties: {
-            '.+\\d+$': {
-              type: 'string'
-            }
-          },
-          additionalProperties: false
-        }, {
-          properties: {
-            bar: true,
-            bar123: true
-          },
-          patternProperties: {
-            '.+\\d+$': true
-          },
-          additionalProperties: false
-        }]
+          {
+            properties: {
+              bar: true,
+              bar123: true
+            },
+            patternProperties: {
+              '.+\\d+$': true
+            },
+            additionalProperties: false
+          }
+        ]
       })
 
       expect(result).to.eql({
@@ -184,29 +205,32 @@ describe('properties', function() {
       })
     })
 
-    it('disallows all except matching patternProperties if both false', function() {
+    it('disallows all except matching patternProperties if both false', function () {
       const schema = {
-        allOf: [{
-          type: 'object',
-          properties: {
-            foo: true,
-            foo123: true
+        allOf: [
+          {
+            type: 'object',
+            properties: {
+              foo: true,
+              foo123: true
+            },
+            patternProperties: {
+              '^bar': true
+            },
+            additionalProperties: false
           },
-          patternProperties: {
-            '^bar': true
-          },
-          additionalProperties: false
-        }, {
-          type: 'object',
-          properties: {
-            bar: true,
-            bar123: true
-          },
-          patternProperties: {
-            '.+\\d+$': true
-          },
-          additionalProperties: false
-        }]
+          {
+            type: 'object',
+            properties: {
+              bar: true,
+              bar123: true
+            },
+            patternProperties: {
+              '.+\\d+$': true
+            },
+            additionalProperties: false
+          }
+        ]
       }
       const origSchema = _.cloneDeep(schema)
       const result = merger(schema)
@@ -221,51 +245,61 @@ describe('properties', function() {
         },
         additionalProperties: false
       })
-
-      ;
-      [{
-        foo123: 'testfdsdfsfd'
-      }, {
-        bar123: 'testfdsdfsfd'
-      }, {
-        foo123: 'testfdsdfsfd'
-      }, {
-        bar: 'fdsaf'
-      }, {
-        abc123: 'fdsaf'
-      }, {
-        bar123: 'fdsaf'
-      }, {
-        barabc: 'fdsaf'
-      }, {
-        // additionalProp
-        foo234: 'testffdsafdsads'
-      }].forEach(function(val) {
+      ;[
+        {
+          foo123: 'testfdsdfsfd'
+        },
+        {
+          bar123: 'testfdsdfsfd'
+        },
+        {
+          foo123: 'testfdsdfsfd'
+        },
+        {
+          bar: 'fdsaf'
+        },
+        {
+          abc123: 'fdsaf'
+        },
+        {
+          bar123: 'fdsaf'
+        },
+        {
+          barabc: 'fdsaf'
+        },
+        {
+          // additionalProp
+          foo234: 'testffdsafdsads'
+        }
+      ].forEach(function (val) {
         validateInputOutput(origSchema, result, val)
       })
     })
 
-    it('disallows all except matching patternProperties if both true', function() {
+    it('disallows all except matching patternProperties if both true', function () {
       const schema = {
-        allOf: [{
-          type: 'object',
-          properties: {
-            foo: true,
-            foo123: true
+        allOf: [
+          {
+            type: 'object',
+            properties: {
+              foo: true,
+              foo123: true
+            },
+            patternProperties: {
+              '^bar': true
+            }
           },
-          patternProperties: {
-            '^bar': true
+          {
+            type: 'object',
+            properties: {
+              bar: true,
+              bar123: true
+            },
+            patternProperties: {
+              '.+\\d+$': true
+            }
           }
-        }, {
-          type: 'object',
-          properties: {
-            bar: true,
-            bar123: true
-          },
-          patternProperties: {
-            '.+\\d+$': true
-          }
-        }]
+        ]
       }
       const origSchema = _.cloneDeep(schema)
       const result = merger(schema)
@@ -284,50 +318,61 @@ describe('properties', function() {
           '.+\\d+$': true
         }
       })
-
-      ;
-      [{
-        foo123: 'testfdsdfsfd'
-      }, {
-        bar123: 'testfdsdfsfd'
-      }, {
-        foo123: 'testfdsdfsfd'
-      }, {
-        foo: 'fdsaf'
-      }, {
-        bar: 'fdsaf'
-      }, {
-        abc123: 'fdsaf'
-      }, {
-        bar123: 'fdsaf'
-      }, {
-        barabc: 'fdsaf'
-      }, {
-        foo234: 'testffdsafdsads'
-      }].forEach(function(val) {
+      ;[
+        {
+          foo123: 'testfdsdfsfd'
+        },
+        {
+          bar123: 'testfdsdfsfd'
+        },
+        {
+          foo123: 'testfdsdfsfd'
+        },
+        {
+          foo: 'fdsaf'
+        },
+        {
+          bar: 'fdsaf'
+        },
+        {
+          abc123: 'fdsaf'
+        },
+        {
+          bar123: 'fdsaf'
+        },
+        {
+          barabc: 'fdsaf'
+        },
+        {
+          foo234: 'testffdsafdsads'
+        }
+      ].forEach(function (val) {
         validateInputOutput(origSchema, result, val)
       })
     })
 
-    it('disallows all except matching patternProperties if one false', function() {
+    it('disallows all except matching patternProperties if one false', function () {
       const schema = {
-        allOf: [{
-          type: 'object',
-          properties: {
-            foo: true,
-            foo123: true
+        allOf: [
+          {
+            type: 'object',
+            properties: {
+              foo: true,
+              foo123: true
+            }
+          },
+          {
+            type: 'object',
+            properties: {
+              bar: true,
+              bar123: true
+            },
+            patternProperties: {
+              '.+\\d+$': true
+            },
+            additionalProperties: false
           }
-        }, {
-          type: 'object',
-          properties: {
-            bar: true,
-            bar123: true
-          },
-          patternProperties: {
-            '.+\\d+$': true
-          },
-          additionalProperties: false
-        }]
+        ]
       }
       const origSchema = _.cloneDeep(schema)
       const result = merger(schema)
@@ -345,45 +390,56 @@ describe('properties', function() {
         },
         additionalProperties: false
       })
-
-      ;
-      [{
-        foo123: 'testfdsdfsfd'
-      }, {
-        bar123: 'testfdsdfsfd'
-      }, {
-        foo123: 'testfdsdfsfd'
-      }, {
-        foo: 'fdsaf'
-      }, {
-        bar: 'fdsaf'
-      }, {
-        abc123: 'fdsaf'
-      }, {
-        bar123: 'fdsaf'
-      }, {
-        barabc: 'fdsaf'
-      }, {
-        foo234: 'testffdsafdsads'
-      }].forEach(function(val) {
+      ;[
+        {
+          foo123: 'testfdsdfsfd'
+        },
+        {
+          bar123: 'testfdsdfsfd'
+        },
+        {
+          foo123: 'testfdsdfsfd'
+        },
+        {
+          foo: 'fdsaf'
+        },
+        {
+          bar: 'fdsaf'
+        },
+        {
+          abc123: 'fdsaf'
+        },
+        {
+          bar123: 'fdsaf'
+        },
+        {
+          barabc: 'fdsaf'
+        },
+        {
+          foo234: 'testffdsafdsads'
+        }
+      ].forEach(function (val) {
         validateInputOutput(origSchema, result, val)
       })
     })
 
-    it('disallows all if no patternProperties and if both false', function() {
+    it('disallows all if no patternProperties and if both false', function () {
       const result = merger({
-        allOf: [{
-          properties: {
-            foo: true,
-            foo123: true
+        allOf: [
+          {
+            properties: {
+              foo: true,
+              foo123: true
+            },
+            additionalProperties: false
           },
-          additionalProperties: false
-        }, {
-          properties: {
-            bar: true
-          },
-          additionalProperties: false
-        }]
+          {
+            properties: {
+              bar: true
+            },
+            additionalProperties: false
+          }
+        ]
       })
 
       expect(result).to.eql({
@@ -391,47 +447,47 @@ describe('properties', function() {
       })
     })
 
-    it('applies additionalProperties to other schemas properties if they have any', function() {
+    it('applies additionalProperties to other schemas properties if they have any', function () {
       const result = merger({
         properties: {
           common: true,
           root: true
         },
         additionalProperties: false,
-        allOf: [{
-          properties: {
-            common: {
-              type: 'string'
+        allOf: [
+          {
+            properties: {
+              common: {
+                type: 'string'
+              },
+              allof1: true
             },
-            allof1: true
+            additionalProperties: {
+              type: ['string', 'null'],
+              maxLength: 10
+            }
           },
-          additionalProperties: {
-            type: [
-              'string', 'null'
-            ],
-            maxLength: 10
-          }
-        }, {
-          properties: {
-            common: {
-              minLength: 1
+          {
+            properties: {
+              common: {
+                minLength: 1
+              },
+              allof2: true
             },
-            allof2: true
+            additionalProperties: {
+              type: ['string', 'integer', 'null'],
+              maxLength: 8
+            }
           },
-          additionalProperties: {
-            type: [
-              'string', 'integer', 'null'
-            ],
-            maxLength: 8
+          {
+            properties: {
+              common: {
+                minLength: 6
+              },
+              allof3: true
+            }
           }
-        }, {
-          properties: {
-            common: {
-              minLength: 6
-            },
-            allof3: true
-          }
-        }]
+        ]
       })
 
       expect(result).to.eql({
@@ -441,9 +497,7 @@ describe('properties', function() {
             minLength: 6
           },
           root: {
-            type: [
-              'string', 'null'
-            ],
+            type: ['string', 'null'],
             maxLength: 8
           }
         },
@@ -451,7 +505,7 @@ describe('properties', function() {
       })
     })
 
-    it('considers patternProperties before merging additionalProperties to other schemas properties if they have any', function() {
+    it('considers patternProperties before merging additionalProperties to other schemas properties if they have any', function () {
       const result = merger({
         properties: {
           common: true,
@@ -463,51 +517,51 @@ describe('properties', function() {
           }
         },
         additionalProperties: false,
-        allOf: [{
-          properties: {
-            common: {
-              type: 'string'
+        allOf: [
+          {
+            properties: {
+              common: {
+                type: 'string'
+              },
+              allof1: true
             },
-            allof1: true
-          },
-          additionalProperties: {
-            type: [
-              'string', 'null', 'integer'
-            ],
-            maxLength: 10
-          }
-        }, {
-          properties: {
-            common: {
-              minLength: 1
-            },
-            allof2: true,
-            allowed123: {
-              type: 'string'
+            additionalProperties: {
+              type: ['string', 'null', 'integer'],
+              maxLength: 10
             }
           },
-          patternProperties: {
-            '.+\\d{2,}$': {
-              minLength: 9
+          {
+            properties: {
+              common: {
+                minLength: 1
+              },
+              allof2: true,
+              allowed123: {
+                type: 'string'
+              }
+            },
+            patternProperties: {
+              '.+\\d{2,}$': {
+                minLength: 9
+              }
+            },
+            additionalProperties: {
+              type: ['string', 'integer', 'null'],
+              maxLength: 8
             }
           },
-          additionalProperties: {
-            type: [
-              'string', 'integer', 'null'
-            ],
-            maxLength: 8
-          }
-        }, {
-          properties: {
-            common: {
-              minLength: 6
-            },
-            allof3: true,
-            allowed456: {
-              type: 'integer'
+          {
+            properties: {
+              common: {
+                minLength: 6
+              },
+              allof3: true,
+              allowed456: {
+                type: 'integer'
+              }
             }
           }
-        }]
+        ]
       })
 
       expect(result).to.eql({
@@ -517,9 +571,7 @@ describe('properties', function() {
             minLength: 6
           },
           root: {
-            type: [
-              'string', 'null', 'integer'
-            ],
+            type: ['string', 'null', 'integer'],
             maxLength: 8
           },
           allowed123: {
@@ -540,73 +592,70 @@ describe('properties', function() {
       })
     })
 
-    it('combines additionalProperties when schemas', function() {
+    it('combines additionalProperties when schemas', function () {
       const result = merger({
         additionalProperties: true,
-        allOf: [{
-          additionalProperties: {
-            type: [
-              'string', 'null'
-            ],
-            maxLength: 10
+        allOf: [
+          {
+            additionalProperties: {
+              type: ['string', 'null'],
+              maxLength: 10
+            }
+          },
+          {
+            additionalProperties: {
+              type: ['string', 'integer', 'null'],
+              maxLength: 8
+            }
           }
-        }, {
-          additionalProperties: {
-            type: [
-              'string', 'integer', 'null'
-            ],
-            maxLength: 8
-          }
-        }]
+        ]
       })
 
       expect(result).to.eql({
         additionalProperties: {
-          type: [
-            'string', 'null'
-          ],
+          type: ['string', 'null'],
           maxLength: 8
         }
       })
     })
   })
 
-  describe('patternProperties', function() {
-    it('merges simliar schemas', function() {
+  describe('patternProperties', function () {
+    it('merges simliar schemas', function () {
       const result = merger({
         patternProperties: {
           '^\\$.+': {
-            type: [
-              'string', 'null', 'integer'
-            ],
-            allOf: [{
-              minimum: 5
-            }]
+            type: ['string', 'null', 'integer'],
+            allOf: [
+              {
+                minimum: 5
+              }
+            ]
           }
         },
-        allOf: [{
-          patternProperties: {
-            '^\\$.+': {
-              type: [
-                'string', 'null'
-              ],
-              allOf: [{
-                minimum: 7
-              }]
-            },
-            '.*': {
-              type: 'null'
+        allOf: [
+          {
+            patternProperties: {
+              '^\\$.+': {
+                type: ['string', 'null'],
+                allOf: [
+                  {
+                    minimum: 7
+                  }
+                ]
+              },
+              '.*': {
+                type: 'null'
+              }
             }
           }
-        }]
+        ]
       })
 
       expect(result).to.eql({
         patternProperties: {
           '^\\$.+': {
-            type: [
-              'string', 'null'
-            ],
+            type: ['string', 'null'],
             minimum: 7
           },
           '.*': {
@@ -617,24 +666,27 @@ describe('properties', function() {
     })
   })
 
-  describe('when patternProperties present', function() {
-    it('merges patternproperties', function() {
+  describe('when patternProperties present', function () {
+    it('merges patternproperties', function () {
       const result = merger({
-        allOf: [{
-          patternProperties: {
-            '.*': {
-              type: 'string',
-              minLength: 5
+        allOf: [
+          {
+            patternProperties: {
+              '.*': {
+                type: 'string',
+                minLength: 5
+              }
+            }
+          },
+          {
+            patternProperties: {
+              '.*': {
+                type: 'string',
+                minLength: 7
+              }
             }
           }
-        }, {
-          patternProperties: {
-            '.*': {
-              type: 'string',
-              minLength: 7
-            }
-          }
-        }]
+        ]
       })
 
       expect(result).to.eql({
@@ -647,37 +699,40 @@ describe('properties', function() {
       })
     })
 
-    it('merges with properties if matching property name', function() {
+    it('merges with properties if matching property name', function () {
       const schema = {
-        allOf: [{
-          type: 'object',
-          properties: {
-            name: {
-              type: 'string',
-              minLength: 1
+        allOf: [
+          {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+                minLength: 1
+              }
+            },
+            patternProperties: {
+              _long$: {
+                type: 'string',
+                minLength: 7
+              }
             }
           },
-          patternProperties: {
-            _long$: {
-              type: 'string',
-              minLength: 7
+          {
+            type: 'object',
+            properties: {
+              foo_long: {
+                type: 'string',
+                minLength: 9
+              }
+            },
+            patternProperties: {
+              '^name.*': {
+                type: 'string',
+                minLength: 8
+              }
             }
           }
-        }, {
-          type: 'object',
-          properties: {
-            foo_long: {
-              type: 'string',
-              minLength: 9
-            }
-          },
-          patternProperties: {
-            '^name.*': {
-              type: 'string',
-              minLength: 8
-            }
-          }
-        }]
+        ]
       }
 
       const origSchema = _.cloneDeep(schema)
@@ -707,22 +762,28 @@ describe('properties', function() {
             minLength: 8
           }
         }
-      });
-      [{
-        name: 'test'
-      }, {
-        name: 'fdsaffsda',
-        name_long: 'testfdsdfsfd'
-      }, {
-        name: 'fdsafdsafas',
-        foo_long: 'testfdsdfsfd'
-      }, {
-        name: 'dfsafdsa',
-        name_long: 'testfdsdfsfd'
-      }, {
-        name: 'test',
-        name2: 'testffdsafdsads'
-      }].forEach(function(val) {
+      })
+      ;[
+        {
+          name: 'test'
+        },
+        {
+          name: 'fdsaffsda',
+          name_long: 'testfdsdfsfd'
+        },
+        {
+          name: 'fdsafdsafas',
+          foo_long: 'testfdsdfsfd'
+        },
+        {
+          name: 'dfsafdsa',
+          name_long: 'testfdsdfsfd'
+        },
+        {
+          name: 'test',
+          name2: 'testffdsafdsads'
+        }
+      ].forEach(function (val) {
         validateInputOutput(schema, result, val)
       })
     })
