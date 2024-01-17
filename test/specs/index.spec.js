@@ -1051,40 +1051,15 @@ describe('module', function () {
           properties: {
             name: {
               type: 'string',
-              pattern: '(?=bar)(?=foo)'
+              pattern: 'bar',
+              allOf: [
+                {
+                  pattern: 'foo'
+                }
+              ]
             }
           }
         }
-      });
-    });
-
-    it('merges pattern using allOf', function () {
-      const result = merger({
-        allOf: [
-          {},
-          {
-            pattern: 'fdsaf'
-          },
-          {
-            pattern: 'abba'
-          }
-        ]
-      });
-
-      expect(result).to.eql({
-        pattern: '(?=fdsaf)(?=abba)'
-      });
-
-      const result2 = merger({
-        allOf: [
-          {
-            pattern: 'abba'
-          }
-        ]
-      });
-
-      expect(result2).to.eql({
-        pattern: 'abba'
       });
     });
 

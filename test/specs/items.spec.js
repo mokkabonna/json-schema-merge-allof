@@ -45,7 +45,12 @@ describe('items', function () {
         properties: {
           name: {
             type: 'string',
-            pattern: '(?=bar)(?=foo)'
+            pattern: 'bar',
+            allOf: [
+              {
+                pattern: 'foo'
+              }
+            ]
           }
         }
       }

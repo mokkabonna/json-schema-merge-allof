@@ -23,7 +23,8 @@ const isTrue = (val) => val === true;
 const schemaResolver = (compacted, key, mergeSchemas) =>
   mergeSchemas(compacted);
 const stringArray = (values) => sortBy(uniq(flattenDeep(values)));
-const notUndefined = (val) => val !== undefined;
+const isUndefined = (val) => val === undefined;
+const notUndefined = (val) => !isUndefined(val);
 const allUniqueKeys = (arr) => uniq(flattenDeep(arr.map(keys)));
 
 // resolvers
@@ -49,6 +50,15 @@ function getAllOf(schema) {
   let { allOf = [], ...copy } = schema;
   copy = isPlainObject(schema) ? copy : schema; // if schema is boolean
   return [copy, ...allOf.map(getAllOf)];
+}
+
+function mergeWithArray(base, newItems) {
+  if (Array.isArray(base)) {
+    base.splice.apply(base, [0, 0].concat(newItems));
+    return base;
+  } else {
+    return newItems;
+  }
 }
 
 function getValues(schemas, key) {
@@ -244,8 +254,13 @@ const defaultResolvers = {
   not(compacted) {
     return { anyOf: compacted };
   },
-  pattern(compacted) {
-    return compacted.map((r) => '(?=' + r + ')').join('');
+  pattern(compacted, paths, mergeSchemas, options, reportUnresolved) {
+    var key = paths.pop();
+    reportUnresolved(
+      compacted.map(function (regexp) {
+        return { [key]: regexp };
+      })
+    );
   },
   multipleOf(compacted) {
     let integers = compacted.slice(0);
@@ -313,6 +328,11 @@ function merger(rootSchema, options, totalSchemas) {
     parents = parents || [];
     const merged = isPlainObject(base) ? base : {};
 
+    // adds any unresolved schemas to the allOf array
+    function addToAllOf(unresolvedSchemas) {
+      merged.allOf = mergeWithArray(merged.allOf, unresolvedSchemas);
+    }
+
     // return undefined, an empty schema
     if (!schemas.length) {
       return;
@@ -377,10 +397,33 @@ function merger(rootSchema, options, totalSchemas) {
 
         const merger = (schemas, extraKey = []) =>
           mergeSchemas(schemas, null, parents.concat(key, extraKey));
-        merged[key] = resolver(compacted, parents.concat(key), merger, options);
 
-        if (merged[key] === undefined) {
+        let abortCalled = false;
+        const result = resolver(
+          compacted,
+          parents.concat(key),
+          merger,
+          options,
+          function abort() {
+            abortCalled = true;
+          }
+        );
+
+        if (abortCalled) {
+          const [first, ...rest] = compacted;
+          merged[key] = first;
+          addToAllOf(
+            rest.map((val) => ({
+              [key]: val
+            }))
+          );
+          return;
+        }
+
+        if (isUndefined(result)) {
           throwIncompatible(compacted, parents.concat(key));
+        } else {
+          merged[key] = result;
         }
       }
     });
