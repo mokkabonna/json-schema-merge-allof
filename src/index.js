@@ -35,6 +35,10 @@ const minimumValue = (compacted) => Math.min.apply(Math, compacted);
 const uniqueItems = (compacted) => compacted.some(isTrue);
 const examples = (compacted) => uniqWith(flatten(compacted), isEqual);
 
+function unresolvable(compacted, paths, mergeSchemas, options, abort) {
+  abort();
+}
+
 function compareProp(key) {
   return function (a, b) {
     return compare(
@@ -254,14 +258,6 @@ const defaultResolvers = {
   not(compacted) {
     return { anyOf: compacted };
   },
-  pattern(compacted, paths, mergeSchemas, options, reportUnresolved) {
-    var key = paths.pop();
-    reportUnresolved(
-      compacted.map(function (regexp) {
-        return { [key]: regexp };
-      })
-    );
-  },
   multipleOf(compacted) {
     let integers = compacted.slice(0);
     let factor = 1;
@@ -285,7 +281,7 @@ defaultResolvers.$schema = first;
 defaultResolvers.additionalItems = schemaResolver;
 defaultResolvers.additionalProperties = schemaResolver;
 defaultResolvers.anyOf = defaultResolvers.oneOf;
-defaultResolvers.contains = schemaResolver;
+defaultResolvers.contains = unresolvable;
 defaultResolvers.default = first;
 defaultResolvers.definitions = defaultResolvers.dependencies;
 defaultResolvers.description = first;
@@ -301,6 +297,7 @@ defaultResolvers.minimum = maximumValue;
 defaultResolvers.minItems = maximumValue;
 defaultResolvers.minLength = maximumValue;
 defaultResolvers.minProperties = maximumValue;
+defaultResolvers.pattern = unresolvable;
 defaultResolvers.properties = propertiesResolver;
 defaultResolvers.propertyNames = schemaResolver;
 defaultResolvers.required = required;

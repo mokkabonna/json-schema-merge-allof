@@ -1019,50 +1019,6 @@ describe('module', function () {
       });
     });
 
-    it('merges contains', function () {
-      const result = merger({
-        allOf: [
-          {},
-          {
-            contains: {
-              properties: {
-                name: {
-                  type: 'string',
-                  pattern: 'bar'
-                }
-              }
-            }
-          },
-          {
-            contains: {
-              properties: {
-                name: {
-                  type: 'string',
-                  pattern: 'foo'
-                }
-              }
-            }
-          }
-        ]
-      });
-
-      expect(result).to.eql({
-        contains: {
-          properties: {
-            name: {
-              type: 'string',
-              pattern: 'bar',
-              allOf: [
-                {
-                  pattern: 'foo'
-                }
-              ]
-            }
-          }
-        }
-      });
-    });
-
     it('extracts pattern from anyOf and oneOf using | operator in regexp');
 
     it.skip('merges multipleOf using allOf or direct assignment', function () {
