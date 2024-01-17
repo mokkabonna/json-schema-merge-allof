@@ -407,7 +407,14 @@ function merger(rootSchema, options, totalSchemas) {
         );
 
         if (abortCalled) {
-          const [first, ...rest] = compacted;
+          const [first, ...rest] = compacted.map((value) => {
+            // if we are dealing with a schema, merge it standalone as a schema,
+            // but outside the context of the parent schema
+            if (schemaProps.includes(key)) {
+              return mergeSchemas([value], value);
+            }
+            return value;
+          });
           merged[key] = first;
           addToAllOf(
             rest.map((val) => ({

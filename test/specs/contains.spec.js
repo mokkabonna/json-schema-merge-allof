@@ -93,6 +93,43 @@ describe('pattern', function () {
     });
   });
 
+  it('merges valid subschemas inside a contains', async () => {
+    const result = mergeAndTest(
+      {
+        contains: {
+          minLength: 2
+        },
+        allOf: [
+          {
+            contains: {
+              maxLength: 10,
+              allOf: [
+                {
+                  maxLength: 8
+                }
+              ]
+            }
+          }
+        ]
+      },
+      null,
+      [['abc'], ['abc'], ['abc', 'de'], ['a'], ['abcdefgfdsafds']]
+    );
+
+    expect(result).to.eql({
+      contains: {
+        minLength: 2
+      },
+      allOf: [
+        {
+          contains: {
+            maxLength: 8
+          }
+        }
+      ]
+    });
+  });
+
   it('does not combine with base schema', async () => {
     const result = mergeAndTest(
       {
