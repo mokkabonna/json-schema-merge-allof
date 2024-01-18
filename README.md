@@ -46,6 +46,7 @@ Since allOf require ALL schemas provided (including the parent schema) to apply,
 ```
 
 This result in the schema :
+
 ```js
 {
   type: 'object',
@@ -69,20 +70,37 @@ As you can see above the strategy is to choose the **most** restrictive of the s
 
 What you are left with is a schema completely free of allOf. Except for in a couple of values that are impossible to properly intersect/combine:
 
+### pattern
+
+If a schema have more than one pattern keyword, then it is left expressed like this:
+
+```js
+{
+  type: 'string',
+  allOf: [{
+    pattern: '\\w+\\s\\w+'
+  }, {
+    pattern: '123$'
+  }]
+}
+```
+
+This is mostly for readability. It could be combined like this `(?=[\\s\\S]*)\\w+\\s\\w+)(?=[\\s\\S]*123$)` but as regex patterns already are quite complicated this is avoided.
+
 ### not
 
 When multiple conflicting **not** values are found, we also use the approach that pattern use, but instead of allOf we use anyOf. When extraction of common rules from anyOf is in place this can be further simplified.
 
 ## Options
+
 **ignoreAdditionalProperties** default **false**
 
 Allows you to combine schema properties even though some schemas have `additionalProperties: false` This is the most common issue people face when trying to expand schemas using allOf and a limitation of the json schema spec. Be aware though that the schema produced will allow more than the original schema. But this is useful if just want to combine schemas using allOf as if additionalProperties wasn't false during the merge process. The resulting schema will still get additionalProperties set to false.
 
-**deep** boolean, default *true*
+**deep** boolean, default _true_
 If false, resolves only the top-level `allOf` keyword in the schema.
 
 If true, resolves all `allOf` keywords in the schema.
-
 
 **resolvers** Object
 Override any default resolver like this:
@@ -90,12 +108,12 @@ Override any default resolver like this:
 ```js
 mergeAllOf(schema, {
   resolvers: {
-    title: function(values, path, mergeSchemas, options) {
+    title: function (values, path, mergeSchemas, options, abort) {
       // choose what title you want to be used based on the conflicting values
       // resolvers MUST return a value other than undefined
     }
   }
-})
+});
 ```
 
 The function is passed:
@@ -104,9 +122,10 @@ The function is passed:
 - **path** an array of strings containing the path to the position in the schema that caused the resolver to be called (useful if you use the same resolver for multiple keywords, or want to implement specific logic for custom paths)
 - **mergeSchemas** a function you can call that merges an array of schemas
 - **options** the options mergeAllOf was called with
-
+- **abort** a function to call if you give up on resolving. If called then the return value is ignored and the original values are kept in a allOf. If there are no keyword on the root schema, the first one is moved to the root schema.
 
 ### Combined resolvers
+
 Some keyword are dependant on other keywords, like properties, patternProperties, additionalProperties. To create a resolver for these the resolver requires this structure:
 
 ```js
@@ -145,6 +164,7 @@ const mergers = {
 Some of the mergers requires you to supply a string of the name or index of the subschema you are currently merging. This is to make sure the path passed to child resolvers are correct.
 
 ### Default resolver
+
 You can set a default resolver that catches any unknown keyword. Let's say you want to use the same strategy as the ones for the meta keywords, to use the first value found. You can accomplish that like this:
 
 ```js
@@ -156,7 +176,6 @@ mergeJsonSchema({
   }
 })
 ```
-
 
 ## Resolvers
 
@@ -170,16 +189,13 @@ All built in reducers for validation keywords are lossless, meaning that they do
 
 For meta keywords like title, description, $id, $schema, default the strategy is to use the first possible value if there are conflicting ones. So the root schema is prioritized. This process possibly removes some meta information from your schema. So it's lossy. Override this by providing custom resolvers.
 
-
 ## $ref
 
 If one of your schemas contain a $ref property you should resolve them using a ref resolver like [json-schema-ref-parser](https://github.com/BigstickCarpet/json-schema-ref-parser) to dereference your schema for you first. Resolving $refs is not the task of this library. Currently it does not support circular references either. But if you use `bundle` in json-schema-ref-parser it should work as expected.
 
-
 ## Other libraries
 
 There exists some libraries that claim to merge schemas combined with allOf, but they just merge schemas using a **very** basic logic. Basically just the same as lodash merge. So you risk ending up with a schema that allows more or less than the original schema would allow.
-
 
 ## Restrictions
 
@@ -195,7 +211,6 @@ We cannot merge schemas that are a logical impossibility, like:
 ```
 
 The library will then throw an error reporting the values that had no valid intersection. But then again, your original schema wouldn't validate anything either.
-
 
 ## Roadmap
 

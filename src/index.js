@@ -23,7 +23,8 @@ const isTrue = (val) => val === true;
 const schemaResolver = (compacted, key, mergeSchemas) =>
   mergeSchemas(compacted);
 const stringArray = (values) => sortBy(uniq(flattenDeep(values)));
-const notUndefined = (val) => val !== undefined;
+const isUndefined = (val) => val === undefined;
+const notUndefined = (val) => !isUndefined(val);
 const allUniqueKeys = (arr) => uniq(flattenDeep(arr.map(keys)));
 
 // resolvers
@@ -33,6 +34,10 @@ const maximumValue = (compacted) => Math.max.apply(Math, compacted);
 const minimumValue = (compacted) => Math.min.apply(Math, compacted);
 const uniqueItems = (compacted) => compacted.some(isTrue);
 const examples = (compacted) => uniqWith(flatten(compacted), isEqual);
+
+function unresolvable(compacted, paths, mergeSchemas, options, abort) {
+  abort();
+}
 
 function compareProp(key) {
   return function (a, b) {
@@ -51,20 +56,17 @@ function getAllOf(schema) {
   return [copy, ...allOf.map(getAllOf)];
 }
 
-function getValues(schemas, key) {
-  return schemas.map((schema) => schema && schema[key]);
+function mergeWithArray(base, newItems) {
+  if (Array.isArray(base)) {
+    base.splice.apply(base, [0, 0].concat(newItems));
+    return base;
+  } else {
+    return newItems;
+  }
 }
 
-function tryMergeSchemaGroups(schemaGroups, mergeSchemas) {
-  return schemaGroups
-    .map(function (schemas, index) {
-      try {
-        return mergeSchemas(schemas, index);
-      } catch (e) {
-        return undefined;
-      }
-    })
-    .filter(notUndefined);
+function getValues(schemas, key) {
+  return schemas.map((schema) => schema && schema[key]);
 }
 
 function keys(obj) {
@@ -73,30 +75,6 @@ function keys(obj) {
   } else {
     return [];
   }
-}
-
-function getAnyOfCombinations(arrOfArrays, combinations) {
-  combinations = combinations || [];
-  if (!arrOfArrays.length) {
-    return combinations;
-  }
-
-  const values = arrOfArrays.slice(0).shift();
-  const rest = arrOfArrays.slice(1);
-  if (combinations.length) {
-    return getAnyOfCombinations(
-      rest,
-      flatten(
-        combinations.map((combination) =>
-          values.map((item) => [item].concat(combination))
-        )
-      )
-    );
-  }
-  return getAnyOfCombinations(
-    rest,
-    values.map((item) => item)
-  );
 }
 
 function throwIncompatible(values, paths) {
@@ -232,20 +210,8 @@ const defaultResolvers = {
       return all;
     }, {});
   },
-  oneOf(compacted, paths, mergeSchemas) {
-    const combinations = getAnyOfCombinations(cloneDeep(compacted));
-    const result = tryMergeSchemaGroups(combinations, mergeSchemas);
-    const unique = uniqWith(result, compare);
-
-    if (unique.length) {
-      return unique;
-    }
-  },
   not(compacted) {
     return { anyOf: compacted };
-  },
-  pattern(compacted) {
-    return compacted.map((r) => '(?=' + r + ')').join('');
   },
   multipleOf(compacted) {
     let integers = compacted.slice(0);
@@ -269,8 +235,8 @@ defaultResolvers.$ref = first;
 defaultResolvers.$schema = first;
 defaultResolvers.additionalItems = schemaResolver;
 defaultResolvers.additionalProperties = schemaResolver;
-defaultResolvers.anyOf = defaultResolvers.oneOf;
-defaultResolvers.contains = schemaResolver;
+defaultResolvers.anyOf = unresolvable;
+defaultResolvers.contains = unresolvable;
 defaultResolvers.default = first;
 defaultResolvers.definitions = defaultResolvers.dependencies;
 defaultResolvers.description = first;
@@ -286,6 +252,8 @@ defaultResolvers.minimum = maximumValue;
 defaultResolvers.minItems = maximumValue;
 defaultResolvers.minLength = maximumValue;
 defaultResolvers.minProperties = maximumValue;
+defaultResolvers.oneOf = unresolvable;
+defaultResolvers.pattern = unresolvable;
 defaultResolvers.properties = propertiesResolver;
 defaultResolvers.propertyNames = schemaResolver;
 defaultResolvers.required = required;
@@ -312,6 +280,11 @@ function merger(rootSchema, options, totalSchemas) {
     schemas = cloneDeep(schemas.filter(notUndefined));
     parents = parents || [];
     const merged = isPlainObject(base) ? base : {};
+
+    // adds any unresolved schemas to the allOf array
+    function addToAllOf(unresolvedSchemas) {
+      merged.allOf = mergeWithArray(merged.allOf, unresolvedSchemas);
+    }
 
     // return undefined, an empty schema
     if (!schemas.length) {
@@ -377,10 +350,45 @@ function merger(rootSchema, options, totalSchemas) {
 
         const merger = (schemas, extraKey = []) =>
           mergeSchemas(schemas, null, parents.concat(key, extraKey));
-        merged[key] = resolver(compacted, parents.concat(key), merger, options);
 
-        if (merged[key] === undefined) {
+        let abortCalled = false;
+        const result = resolver(
+          compacted,
+          parents.concat(key),
+          merger,
+          options,
+          function abort() {
+            abortCalled = true;
+          }
+        );
+
+        if (abortCalled) {
+          const [first, ...rest] = compacted.map((value) => {
+            // if we are dealing with a schema, merge it standalone as a schema,
+            // but outside the context of the parent schema
+
+            if (schemaArrays.includes(key)) {
+              return value.map((val) => mergeSchemas([val], val));
+            }
+
+            if (schemaProps.includes(key)) {
+              return mergeSchemas([value], value);
+            }
+            return value;
+          });
+          merged[key] = first;
+          addToAllOf(
+            rest.map((val) => ({
+              [key]: val
+            }))
+          );
+          return;
+        }
+
+        if (isUndefined(result)) {
           throwIncompatible(compacted, parents.concat(key));
+        } else {
+          merged[key] = result;
         }
       }
     });

@@ -1,10 +1,11 @@
 import { expect } from 'chai';
 import merger from '../../src';
+import { mergeAndTest } from '../utils/merger.js';
 const { describe, it } = await import('vitest');
 
 describe('simple resolver', () => {
   it('merges as expected (with enum)', () => {
-    const result = merger({
+    const result = mergeAndTest({
       enum: [1, 2],
       allOf: [
         {
@@ -98,15 +99,19 @@ describe('simple resolver', () => {
         }
       };
 
-      const resultCustom = merger(
+      const resultCustom = mergeAndTest(
         {
           allOf: [
             {
               if: {
                 required: ['def']
               },
-              then: {},
-              else: {}
+              then: {
+                maxLength: 2
+              },
+              else: {
+                maxLength: 150
+              }
             }
           ]
         },
@@ -117,8 +122,12 @@ describe('simple resolver', () => {
         if: {
           required: ['def']
         },
-        then: {},
-        else: {}
+        then: {
+          maxLength: 2
+        },
+        else: {
+          maxLength: 150
+        }
       });
     });
   });
