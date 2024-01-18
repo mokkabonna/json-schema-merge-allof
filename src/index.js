@@ -69,48 +69,12 @@ function getValues(schemas, key) {
   return schemas.map((schema) => schema && schema[key]);
 }
 
-function tryMergeSchemaGroups(schemaGroups, mergeSchemas) {
-  return schemaGroups
-    .map(function (schemas, index) {
-      try {
-        return mergeSchemas(schemas, index);
-      } catch (e) {
-        return undefined;
-      }
-    })
-    .filter(notUndefined);
-}
-
 function keys(obj) {
   if (isPlainObject(obj) || Array.isArray(obj)) {
     return Object.keys(obj);
   } else {
     return [];
   }
-}
-
-function getAnyOfCombinations(arrOfArrays, combinations) {
-  combinations = combinations || [];
-  if (!arrOfArrays.length) {
-    return combinations;
-  }
-
-  const values = arrOfArrays.slice(0).shift();
-  const rest = arrOfArrays.slice(1);
-  if (combinations.length) {
-    return getAnyOfCombinations(
-      rest,
-      flatten(
-        combinations.map((combination) =>
-          values.map((item) => [item].concat(combination))
-        )
-      )
-    );
-  }
-  return getAnyOfCombinations(
-    rest,
-    values.map((item) => item)
-  );
 }
 
 function throwIncompatible(values, paths) {
@@ -246,15 +210,6 @@ const defaultResolvers = {
       return all;
     }, {});
   },
-  oneOf(compacted, paths, mergeSchemas) {
-    const combinations = getAnyOfCombinations(cloneDeep(compacted));
-    const result = tryMergeSchemaGroups(combinations, mergeSchemas);
-    const unique = uniqWith(result, compare);
-
-    if (unique.length) {
-      return unique;
-    }
-  },
   not(compacted) {
     return { anyOf: compacted };
   },
@@ -280,7 +235,7 @@ defaultResolvers.$ref = first;
 defaultResolvers.$schema = first;
 defaultResolvers.additionalItems = schemaResolver;
 defaultResolvers.additionalProperties = schemaResolver;
-defaultResolvers.anyOf = defaultResolvers.oneOf;
+defaultResolvers.anyOf = unresolvable;
 defaultResolvers.contains = unresolvable;
 defaultResolvers.default = first;
 defaultResolvers.definitions = defaultResolvers.dependencies;
@@ -297,6 +252,7 @@ defaultResolvers.minimum = maximumValue;
 defaultResolvers.minItems = maximumValue;
 defaultResolvers.minLength = maximumValue;
 defaultResolvers.minProperties = maximumValue;
+defaultResolvers.oneOf = unresolvable;
 defaultResolvers.pattern = unresolvable;
 defaultResolvers.properties = propertiesResolver;
 defaultResolvers.propertyNames = schemaResolver;
@@ -410,6 +366,11 @@ function merger(rootSchema, options, totalSchemas) {
           const [first, ...rest] = compacted.map((value) => {
             // if we are dealing with a schema, merge it standalone as a schema,
             // but outside the context of the parent schema
+
+            if (schemaArrays.includes(key)) {
+              return value.map((val) => mergeSchemas([val], val));
+            }
+
             if (schemaProps.includes(key)) {
               return mergeSchemas([value], value);
             }
