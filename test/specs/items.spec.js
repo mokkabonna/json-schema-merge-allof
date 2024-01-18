@@ -1,10 +1,10 @@
 import { describe, it } from 'vitest';
 import { expect } from 'chai';
-import merger from '../../src';
+import { mergeAndTest } from '../utils/merger.js';
 
 describe('items', function () {
   it('merges additionalItems', function () {
-    const result = merger({
+    const result = mergeAndTest({
       items: {
         type: 'object'
       },
@@ -59,7 +59,7 @@ describe('items', function () {
 
   describe('when single schema', function () {
     it('merges them', function () {
-      const result = merger({
+      const result = mergeAndTest({
         items: {
           type: 'string',
           allOf: [
@@ -96,7 +96,7 @@ describe('items', function () {
 
   describe('when array', function () {
     it('merges them in when additionalItems are all undefined', function () {
-      const result = merger({
+      const result = mergeAndTest({
         items: [
           {
             type: 'string',
@@ -140,7 +140,7 @@ describe('items', function () {
     });
 
     it('merges in additionalItems from one if present', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             items: [
@@ -186,7 +186,7 @@ describe('items', function () {
     });
 
     it('merges in additionalItems from one if present', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             items: [
@@ -233,7 +233,7 @@ describe('items', function () {
     });
 
     it('merges in additionalItems schema', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             items: [
@@ -295,7 +295,7 @@ describe('items', function () {
 
   describe('when mixed array and object', function () {
     it('merges in additionalItems schema', function () {
-      const result = merger({
+      const result = mergeAndTest({
         // This should be ignored according to spec when items absent
         additionalItems: {
           type: 'integer',

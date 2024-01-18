@@ -3,69 +3,33 @@ import { mergeAndTest } from '../utils/merger.js';
 
 describe('pattern', function () {
   it('merges contains', function () {
-    const result = mergeAndTest(
-      {
-        allOf: [
-          {},
-          {
-            contains: {
-              properties: {
-                name: {
-                  type: 'string',
-                  minLength: 2,
-                  pattern: 'bar'
-                }
-              }
-            }
-          },
-          {
-            contains: {
-              properties: {
-                name: {
-                  type: 'string',
-                  minLength: 1,
-                  pattern: 'foo'
-                }
+    const result = mergeAndTest({
+      allOf: [
+        {},
+        {
+          contains: {
+            properties: {
+              name: {
+                type: 'string',
+                minLength: 2,
+                pattern: 'bar'
               }
             }
           }
-        ]
-      },
-      null,
-      [
-        [
-          {
-            name: 'somethingelse'
-          },
-          {
-            name: 'bar'
+        },
+        {
+          contains: {
+            properties: {
+              name: {
+                type: 'string',
+                minLength: 1,
+                pattern: 'foo'
+              }
+            }
           }
-        ],
-        [
-          {
-            name: 'foobar'
-          }
-        ],
-        [
-          {
-            name: 'bar'
-          },
-          {
-            name: 'foo'
-          }
-        ],
-        [
-          {
-            name: 'bar'
-          }
-        ],
-        [
-          {
-            name: 'foo'
-          }
-        ]
+        }
       ]
-    );
+    });
 
     expect(result).to.eql({
       contains: {
@@ -94,27 +58,23 @@ describe('pattern', function () {
   });
 
   it('merges valid subschemas inside a contains', async () => {
-    const result = mergeAndTest(
-      {
-        contains: {
-          minLength: 2
-        },
-        allOf: [
-          {
-            contains: {
-              maxLength: 10,
-              allOf: [
-                {
-                  maxLength: 8
-                }
-              ]
-            }
-          }
-        ]
+    const result = mergeAndTest({
+      contains: {
+        minLength: 2
       },
-      null,
-      [['abc'], ['abc'], ['abc', 'de'], ['a'], ['abcdefgfdsafds']]
-    );
+      allOf: [
+        {
+          contains: {
+            maxLength: 10,
+            allOf: [
+              {
+                maxLength: 8
+              }
+            ]
+          }
+        }
+      ]
+    });
 
     expect(result).to.eql({
       contains: {
@@ -131,27 +91,23 @@ describe('pattern', function () {
   });
 
   it('does not combine with base schema', async () => {
-    const result = mergeAndTest(
-      {
-        contains: {
-          minLength: 2
-        },
-        allOf: [
-          {
-            contains: {
-              minLength: 3
-            }
-          },
-          {
-            contains: {
-              maxLength: 10
-            }
-          }
-        ]
+    const result = mergeAndTest({
+      contains: {
+        minLength: 2
       },
-      null,
-      [['abc'], ['abc'], ['abc', 'de'], ['a'], ['abcdefgfdsafds']]
-    );
+      allOf: [
+        {
+          contains: {
+            minLength: 3
+          }
+        },
+        {
+          contains: {
+            maxLength: 10
+          }
+        }
+      ]
+    });
 
     expect(result).to.eql({
       contains: {

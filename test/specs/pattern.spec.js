@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { mergeAndTest } from '../utils/merger.js';
-import merger from '../../src/index.js';
 
 describe('pattern', function () {
   it('does not merge pattern as it is not possible', function () {
@@ -29,7 +28,7 @@ describe('pattern', function () {
       ]
     });
 
-    const result2 = merger({
+    const result2 = mergeAndTest({
       allOf: [
         {
           pattern: 'abba'

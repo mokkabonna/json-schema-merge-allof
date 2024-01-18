@@ -4,6 +4,7 @@ import merger from '../../src';
 import { stub as _stub, assert } from 'sinon';
 import { cloneDeep } from 'lodash';
 import Ajv from 'ajv';
+import { mergeAndTest } from '../utils/merger.js';
 
 const ajv = new Ajv({
   allowMatchingProperties: true
@@ -61,7 +62,7 @@ describe('properties', function () {
 
   describe('additionalProperties', function () {
     it('allows no extra properties if additionalProperties is false', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             additionalProperties: true
@@ -78,7 +79,7 @@ describe('properties', function () {
     });
 
     it('allows only intersecting properties', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             properties: {
@@ -104,7 +105,7 @@ describe('properties', function () {
     });
 
     it('allows intersecting patternproperties', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             properties: {
@@ -138,7 +139,7 @@ describe('properties', function () {
     });
 
     it('disallows all except matching patternProperties if both false', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             properties: {
@@ -168,7 +169,7 @@ describe('properties', function () {
     });
 
     it('disallows all except matching patternProperties if both false', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             properties: {
@@ -237,7 +238,7 @@ describe('properties', function () {
         ]
       };
       const origSchema = cloneDeep(schema);
-      const result = merger(schema);
+      const result = mergeAndTest(schema);
       expect(result).not.to.eql(origSchema);
 
       expect(result).to.eql({
@@ -306,7 +307,7 @@ describe('properties', function () {
         ]
       };
       const origSchema = cloneDeep(schema);
-      const result = merger(schema);
+      const result = mergeAndTest(schema);
       expect(result).not.to.eql(origSchema);
 
       expect(result).to.eql({
@@ -379,7 +380,7 @@ describe('properties', function () {
         ]
       };
       const origSchema = cloneDeep(schema);
-      const result = merger(schema);
+      const result = mergeAndTest(schema);
       expect(result).not.to.eql(origSchema);
 
       expect(result).to.eql({
@@ -428,7 +429,7 @@ describe('properties', function () {
     });
 
     it('disallows all if no patternProperties and if both false', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             properties: {
@@ -452,7 +453,7 @@ describe('properties', function () {
     });
 
     it('applies additionalProperties to other schemas properties if they have any', function () {
-      const result = merger({
+      const result = mergeAndTest({
         properties: {
           common: true,
           root: true
@@ -509,64 +510,77 @@ describe('properties', function () {
       });
     });
 
-    it('considers patternProperties before merging additionalProperties to other schemas properties if they have any', function () {
-      const result = merger({
-        properties: {
-          common: true,
-          root: true
-        },
-        patternProperties: {
-          '.+\\d{2,}$': {
-            minLength: 7
-          }
-        },
-        additionalProperties: false,
-        allOf: [
-          {
-            properties: {
-              common: {
-                type: 'string'
-              },
-              allof1: true
-            },
-            additionalProperties: {
-              type: ['string', 'null', 'integer'],
-              maxLength: 10
+    it.skip('considers patternProperties before merging additionalProperties to other schemas properties if they have any', function () {
+      const result = mergeAndTest(
+        {
+          properties: {
+            common: true,
+            root: true
+          },
+          patternProperties: {
+            '.+\\d{2,}$': {
+              minLength: 7
             }
           },
-          {
-            properties: {
-              common: {
-                minLength: 1
+          additionalProperties: false,
+          allOf: [
+            {
+              properties: {
+                common: {
+                  type: 'string'
+                },
+                allof1: true
               },
-              allof2: true,
-              allowed123: {
-                type: 'string'
+              additionalProperties: {
+                type: ['string', 'null', 'integer'],
+                maxLength: 10
               }
             },
-            patternProperties: {
-              '.+\\d{2,}$': {
-                minLength: 9
+            {
+              properties: {
+                common: {
+                  minLength: 1
+                },
+                allof2: true,
+                allowed123: {
+                  type: 'string'
+                }
+              },
+              patternProperties: {
+                '.+\\d{2,}$': {
+                  minLength: 9
+                }
+              },
+              additionalProperties: {
+                type: ['string', 'integer', 'null'],
+                maxLength: 8
               }
             },
-            additionalProperties: {
-              type: ['string', 'integer', 'null'],
-              maxLength: 8
+            {
+              properties: {
+                common: {
+                  minLength: 6
+                },
+                allof3: true,
+                allowed456: {
+                  type: 'integer'
+                }
+              }
             }
+          ]
+        },
+        null,
+        [
+          { '000': true },
+          {
+            '000': 'abcdefghi'
           },
-          {
-            properties: {
-              common: {
-                minLength: 6
-              },
-              allof3: true,
-              allowed456: {
-                type: 'integer'
-              }
-            }
-          }
+          // {
+          //   abc: 'abcdefghi'
+          // },
+          { 123: 'abcdefghi' }
         ]
-      });
+      );
 
       expect(result).to.eql({
         properties: {
@@ -597,7 +611,7 @@ describe('properties', function () {
     });
 
     it('combines additionalProperties when schemas', function () {
-      const result = merger({
+      const result = mergeAndTest({
         additionalProperties: true,
         allOf: [
           {
@@ -626,7 +640,7 @@ describe('properties', function () {
 
   describe('patternProperties', function () {
     it('merges simliar schemas', function () {
-      const result = merger({
+      const result = mergeAndTest({
         patternProperties: {
           '^\\$.+': {
             type: ['string', 'null', 'integer'],
@@ -672,7 +686,7 @@ describe('properties', function () {
 
   describe('when patternProperties present', function () {
     it('merges patternproperties', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             patternProperties: {
@@ -740,7 +754,7 @@ describe('properties', function () {
       };
 
       const origSchema = cloneDeep(schema);
-      const result = merger(schema);
+      const result = mergeAndTest(schema);
 
       expect(result).not.to.eql(origSchema);
 

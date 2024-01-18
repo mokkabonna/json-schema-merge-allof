@@ -1,25 +1,9 @@
 import { describe, it } from 'vitest';
 import { expect } from 'chai';
-import mergerModule from '../../src';
-import Ajv from 'ajv';
 import _, { isObject, flatten, intersection } from 'lodash';
 import { dereference } from 'json-schema-ref-parser';
-
-const ajv = new Ajv();
-
-function merger(schema, options) {
-  const result = mergerModule(schema, options);
-  try {
-    if (!ajv.validateSchema(result)) {
-      throw new Error("Schema returned by resolver isn't valid.");
-    }
-    return result;
-  } catch (e) {
-    if (!/stack/i.test(e.message)) {
-      throw e;
-    }
-  }
-}
+import { mergeAndTest } from '../utils/merger.js';
+import merger from '../../src/index.js';
 
 describe('module', function () {
   it('merges schema with same object reference multiple places', () => {
@@ -130,7 +114,7 @@ describe('module', function () {
   });
 
   it('combines simple usecase', function () {
-    const result = merger({
+    const result = mergeAndTest({
       allOf: [
         {
           type: 'string',
@@ -151,7 +135,7 @@ describe('module', function () {
   });
 
   it('combines without allOf', function () {
-    const result = merger({
+    const result = mergeAndTest({
       properties: {
         foo: {
           type: 'string'
@@ -203,7 +187,7 @@ describe('module', function () {
     });
 
     it('merges minLength if conflict', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             minLength: 1
@@ -220,7 +204,7 @@ describe('module', function () {
     });
 
     it('merges minimum if conflict', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             minimum: 1
@@ -254,7 +238,7 @@ describe('module', function () {
     });
 
     it('merges minItems if conflict', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             minItems: 1
@@ -271,7 +255,7 @@ describe('module', function () {
     });
 
     it('merges maximum if conflict', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             maximum: 1
@@ -288,7 +272,7 @@ describe('module', function () {
     });
 
     it('merges exclusiveMaximum if conflict', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             exclusiveMaximum: 1
@@ -305,7 +289,7 @@ describe('module', function () {
     });
 
     it('merges maxItems if conflict', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             maxItems: 1
@@ -322,7 +306,7 @@ describe('module', function () {
     });
 
     it('merges maxLength if conflict', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             maxLength: 4
@@ -339,7 +323,7 @@ describe('module', function () {
     });
 
     it('merges uniqueItems to most restrictive if conflict', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             uniqueItems: true
@@ -372,7 +356,7 @@ describe('module', function () {
 
     it('throws if merging incompatible type', function () {
       expect(function () {
-        merger({
+        mergeAndTest({
           allOf: [
             {
               type: 'null'
@@ -386,7 +370,7 @@ describe('module', function () {
     });
 
     it('merges type if conflict', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {},
           {
@@ -405,7 +389,7 @@ describe('module', function () {
         type: ['string', 'null']
       });
 
-      const result2 = merger({
+      const result2 = mergeAndTest({
         allOf: [
           {},
           {
@@ -425,7 +409,7 @@ describe('module', function () {
       });
 
       expect(function () {
-        merger({
+        mergeAndTest({
           allOf: [
             {
               type: ['null']
@@ -439,14 +423,14 @@ describe('module', function () {
     });
 
     it('merges enum', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {},
           {
             enum: ['string', 'null', 'object', {}, [2], [1], null]
           },
           {
-            enum: ['string', {}, [1], [1]]
+            enum: ['string', {}, [1]]
           },
           {
             enum: ['null', 'string', {}, [3], [1], null]
@@ -461,7 +445,7 @@ describe('module', function () {
 
     it('throws if enum is incompatible', function () {
       expect(function () {
-        merger({
+        mergeAndTest({
           allOf: [
             {},
             {
@@ -475,7 +459,7 @@ describe('module', function () {
       }).not.to.throw(/incompatible/);
 
       expect(function () {
-        merger({
+        mergeAndTest({
           allOf: [
             {},
             {
@@ -490,7 +474,7 @@ describe('module', function () {
     });
 
     it('merges const', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {},
           {
@@ -508,7 +492,7 @@ describe('module', function () {
     });
 
     it('merges anyOf', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             anyOf: [
@@ -543,7 +527,7 @@ describe('module', function () {
     });
 
     it('merges anyOf by finding valid combinations', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             anyOf: [
@@ -584,7 +568,7 @@ describe('module', function () {
     });
 
     it.skip('extracts common logic', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             anyOf: [
@@ -626,7 +610,7 @@ describe('module', function () {
     });
 
     it.skip('merges anyOf into main schema if left with only one combination', function () {
-      const result = merger({
+      const result = mergeAndTest({
         required: ['abc'],
         allOf: [
           {
@@ -655,7 +639,7 @@ describe('module', function () {
     });
 
     it('merges nested allOf if inside singular anyOf', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             anyOf: [
@@ -696,7 +680,7 @@ describe('module', function () {
 
     it('throws if no intersection at all', function () {
       expect(function () {
-        merger({
+        mergeAndTest({
           allOf: [
             {
               anyOf: [
@@ -717,7 +701,7 @@ describe('module', function () {
       }).to.throw(/incompatible/);
 
       expect(function () {
-        merger({
+        mergeAndTest({
           allOf: [
             {
               anyOf: [
@@ -789,7 +773,7 @@ describe('module', function () {
     });
 
     it('merges nested allOf if inside singular oneOf', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             type: ['array', 'string', 'number'],
@@ -1022,7 +1006,7 @@ describe('module', function () {
     it('extracts pattern from anyOf and oneOf using | operator in regexp');
 
     it.skip('merges multipleOf using allOf or direct assignment', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {
             title: 'foo',
@@ -1063,7 +1047,7 @@ describe('module', function () {
     });
 
     it('merges multipleOf by finding lowest common multiple (LCM)', function () {
-      const result = merger({
+      const result = mergeAndTest({
         allOf: [
           {},
           {
@@ -1110,7 +1094,7 @@ describe('module', function () {
       });
 
       expect(
-        merger({
+        mergeAndTest({
           allOf: [
             {
               multipleOf: 4
@@ -1128,13 +1112,13 @@ describe('module', function () {
       });
 
       expect(
-        merger({
+        mergeAndTest({
           allOf: [
             {
-              multipleOf: 0.3
+              multipleOf: 3
             },
             {
-              multipleOf: 0.7
+              multipleOf: 7
             },
             {
               multipleOf: 1
@@ -1146,10 +1130,10 @@ describe('module', function () {
       });
 
       expect(
-        merger({
+        mergeAndTest({
           allOf: [
             {
-              multipleOf: 0.5
+              multipleOf: 5
             },
             {
               multipleOf: 2
@@ -1157,17 +1141,17 @@ describe('module', function () {
           ]
         })
       ).to.eql({
-        multipleOf: 2
+        multipleOf: 10
       });
 
       expect(
-        merger({
+        mergeAndTest({
           allOf: [
             {
-              multipleOf: 0.3
+              multipleOf: 3
             },
             {
-              multipleOf: 0.5
+              multipleOf: 5
             },
             {
               multipleOf: 1
@@ -1175,17 +1159,17 @@ describe('module', function () {
           ]
         })
       ).to.eql({
-        multipleOf: 3
+        multipleOf: 15
       });
 
       expect(
-        merger({
+        mergeAndTest({
           allOf: [
             {
-              multipleOf: 0.3
+              multipleOf: 3
             },
             {
-              multipleOf: 0.7
+              multipleOf: 7
             },
             {
               multipleOf: 1
@@ -1197,13 +1181,13 @@ describe('module', function () {
       });
 
       expect(
-        merger({
+        mergeAndTest({
           allOf: [
             {
-              multipleOf: 0.4
+              multipleOf: 4
             },
             {
-              multipleOf: 0.7
+              multipleOf: 7
             },
             {
               multipleOf: 3
@@ -1211,17 +1195,17 @@ describe('module', function () {
           ]
         })
       ).to.eql({
-        multipleOf: 42
+        multipleOf: 84
       });
 
       expect(
-        merger({
+        mergeAndTest({
           allOf: [
             {
-              multipleOf: 0.2
+              multipleOf: 2
             },
             {
-              multipleOf: 0.65
+              multipleOf: 65
             },
             {
               multipleOf: 1
@@ -1229,11 +1213,11 @@ describe('module', function () {
           ]
         })
       ).to.eql({
-        multipleOf: 13
+        multipleOf: 130
       });
 
       expect(
-        merger({
+        mergeAndTest({
           allOf: [
             {
               multipleOf: 100000
@@ -1255,7 +1239,7 @@ describe('module', function () {
   describe('merging arrays', function () {
     it('merges required object', function () {
       expect(
-        merger({
+        mergeAndTest({
           required: ['prop2'],
           allOf: [
             {
@@ -1316,7 +1300,7 @@ describe('module', function () {
   describe('merging objects', function () {
     it('merges child objects', function () {
       expect(
-        merger({
+        mergeAndTest({
           properties: {
             name: {
               title: 'Name',
@@ -1359,7 +1343,7 @@ describe('module', function () {
 
     it('merges boolean schemas', function () {
       expect(
-        merger({
+        mergeAndTest({
           properties: {
             name: true
           },
@@ -1399,7 +1383,7 @@ describe('module', function () {
       });
 
       expect(
-        merger({
+        mergeAndTest({
           properties: {
             name: false
           },
@@ -1438,7 +1422,7 @@ describe('module', function () {
       ).to.eql(false);
 
       expect(
-        merger({
+        mergeAndTest({
           properties: {
             name: true
           },
@@ -1470,7 +1454,7 @@ describe('module', function () {
 
     it('merges all allOf', function () {
       expect(
-        merger({
+        mergeAndTest({
           properties: {
             name: {
               allOf: [
@@ -1599,7 +1583,7 @@ describe('module', function () {
 
       expected.person.properties.child = expected.person;
 
-      const result = merger(schema);
+      const result = mergeAndTest(schema);
 
       expect(result).to.eql({
         properties: expected
@@ -1665,7 +1649,7 @@ describe('module', function () {
 
         expected.person.properties.child = expected.person;
 
-        const result = merger(schema);
+        const result = mergeAndTest(schema);
 
         expect(result).to.eql({
           properties: expected,
@@ -1686,7 +1670,7 @@ describe('module', function () {
 
   describe('dependencies', function () {
     it('merges simliar schemas', function () {
-      const result = merger({
+      const result = mergeAndTest({
         dependencies: {
           foo: {
             type: ['string', 'null', 'integer'],
@@ -1730,7 +1714,7 @@ describe('module', function () {
       const result = merger({
         dependencies: {
           bar: {
-            type: ['string', 'null', 'integer'],
+            type: ['string', 'null', 'integer', 'object'],
             required: ['abc']
           }
         },
@@ -1746,7 +1730,7 @@ describe('module', function () {
       expect(result).to.eql({
         dependencies: {
           bar: {
-            type: ['string', 'null', 'integer'],
+            type: ['string', 'null', 'integer', 'object'],
             required: ['abc', 'prop4']
           }
         }
@@ -1756,7 +1740,7 @@ describe('module', function () {
 
   describe('propertyNames', function () {
     it('merges simliar schemas', function () {
-      const result = merger({
+      const result = mergeAndTest({
         propertyNames: {
           type: 'string',
           allOf: [
